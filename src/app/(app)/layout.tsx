@@ -1,0 +1,10 @@
+import { BottomTabBar } from "@/components/nav/BottomTabBar";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <main className="flex-1 pb-24">{children}</main>
+      <BottomTabBar />
+    </div>
+  );
+}

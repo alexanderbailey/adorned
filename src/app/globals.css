@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --font-geist-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist-mono: ui-monospace, monospace;
+}
+
+/* Prevent overscroll bounce on iOS PWA */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe-area insets for iOS home-bar */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}

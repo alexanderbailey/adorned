@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+// Inter loaded via globals.css @import
 
 export const metadata: Metadata = {
   title: "Adorned",
@@ -32,7 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-canvas text-charcoal antialiased">{children}</body>
+      <body className="bg-canvas text-charcoal font-sans antialiased">{children}</body>
     </html>
   );
 }

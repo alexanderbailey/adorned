@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1400, initial-scale=1" />
+<title>Adorned — Mobile PWA Design</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tokens.jsx"></script>
+<script type="text/babel" src="items.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="screens/onboarding.jsx"></script>
+<script type="text/babel" src="screens/wardrobe.jsx"></script>
+<script type="text/babel" src="screens/item-detail.jsx"></script>
+<script type="text/babel" src="screens/add-item.jsx"></script>
+<script type="text/babel" src="screens/generate.jsx"></script>
+<script type="text/babel" src="screens/outfit-detail.jsx"></script>
+<script type="text/babel" src="screens/manual-builder.jsx"></script>
+<script type="text/babel" src="screens/outfits-tab.jsx"></script>
+<script type="text/babel" src="screens/profile.jsx"></script>
+<script type="text/babel" src="screens/style-sheet.jsx"></script>
+
+<script type="text/babel">
+
+const PHONE_W = 390;
+const PHONE_H = 844;
+const PHONE_STYLE  = { background: '#FAFAF7', borderRadius: 0, boxShadow: 'none', overflow: 'visible' };
+const SHEET_STYLE  = { background: '#FAFAF7', borderRadius: 0, boxShadow: '0 1px 3px rgba(0,0,0,.05), 0 8px 30px rgba(0,0,0,.06)' };
+
+// Helpers: build the inner payload (with a data-screen-label wrapper for
+// comments). DCArtboard tags MUST be the direct children of DCSection — so
+// these are content helpers, not wrappers.
+const Phone$ = (label, content) => (
+  <div data-screen-label={label} style={{ width: PHONE_W, height: PHONE_H, position: 'relative' }}>{content}</div>
+);
+const Sheet$ = (label, content) => (
+  <div data-screen-label={label} style={{ width: '100%', height: '100%', position: 'relative' }}>{content}</div>
+);
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="system" title="System" subtitle="Tokens, type, components & the flat-lay rules">
+        <DCArtboard id="palette" label="00a · Palette" width={620} height={1120} style={SHEET_STYLE}>
+          {Sheet$('00a · Palette', <StyleSheetPalette/>)}
+        </DCArtboard>
+        <DCArtboard id="type" label="00b · Type ramp" width={620} height={920} style={SHEET_STYLE}>
+          {Sheet$('00b · Type', <StyleSheetType/>)}
+        </DCArtboard>
+        <DCArtboard id="comps" label="00c · Components" width={680} height={1320} style={SHEET_STYLE}>
+          {Sheet$('00c · Components', <StyleSheetComponents/>)}
+        </DCArtboard>
+        <DCArtboard id="flatlay" label="00d · Flat-lay anatomy" width={760} height={620} style={SHEET_STYLE}>
+          {Sheet$('00d · Flat-lay', <StyleSheetFlatlay/>)}
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="Onboarding" subtitle="Three steps from first run to ready">
+        <DCArtboard id="ob1" label="01 · Palette" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('01 · Onboarding palette', <OnboardingStep1/>)}</DCArtboard>
+        <DCArtboard id="ob2" label="02 · Style brief" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('02 · Style brief', <OnboardingStep2/>)}</DCArtboard>
+        <DCArtboard id="ob3" label="03 · Reference photo" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('03 · Reference photo', <OnboardingStep3/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="wardrobe" title="Wardrobe" subtitle="The home tab — gallery, filter, item">
+        <DCArtboard id="wd1" label="04 · Wardrobe gallery" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('04 · Wardrobe', <Wardrobe/>)}</DCArtboard>
+        <DCArtboard id="wd2" label="05 · Filter sheet" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('05 · Filter sheet', <Wardrobe filterOpen={true}/>)}</DCArtboard>
+        <DCArtboard id="wd3" label="06 · Item detail" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('06 · Item detail', <ItemDetail/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="add" title="Adding items" subtitle="Single snap or bulk import — both AI-assisted">
+        <DCArtboard id="ad1" label="07 · Camera" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('07 · Camera', <AddItemCamera/>)}</DCArtboard>
+        <DCArtboard id="ad2" label="08 · Review & tag" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('08 · Review tag', <AddItemReview/>)}</DCArtboard>
+        <DCArtboard id="ad3" label="09 · Bulk queue" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('09 · Bulk queue', <AddItemBulk/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="generate" title="Generate" subtitle="The prompt-driven heart of the app">
+        <DCArtboard id="gn1" label="10 · Prompt" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('10 · Prompt', <Generate/>)}</DCArtboard>
+        <DCArtboard id="gn2" label="11 · Loading state" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('11 · Loading', <GenerateLoading/>)}</DCArtboard>
+        <DCArtboard id="gn3" label="12 · 3 results" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('12 · 3 results', <Generate withResults={true}/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="outfit-detail" title="Outfit detail" subtitle="Three tiers of visualisation — collage, AI lookbook, real VTON">
+        <DCArtboard id="od1" label="13 · Flat-lay (T1)" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('13 · Outfit flat-lay', <OutfitDetail view="flatlay"/>)}</DCArtboard>
+        <DCArtboard id="od2" label="14 · Visualising (T2)" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('14 · Visualising', <OutfitDetail view="visualise-loading"/>)}</DCArtboard>
+        <DCArtboard id="od3" label="15 · On-figure (T2)" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('15 · On-figure', <OutfitDetail view="visualise-done"/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="outfits" title="Outfits tab & manual builder" subtitle="Browse history; build by hand">
+        <DCArtboard id="ot1" label="16 · Outfits tab" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('16 · Outfits tab', <OutfitsTab/>)}</DCArtboard>
+        <DCArtboard id="ot2" label="17 · Manual builder" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('17 · Manual builder', <ManualBuilder/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="profile" title="Profile & settings" subtitle="Editable canonical style summary, palette, inspo, ref photo">
+        <DCArtboard id="pr1" label="18 · Profile" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('18 · Profile', <Profile/>)}</DCArtboard>
+      </DCSection>
+
+      <DCSection id="dark" title="Dark mode reference" subtitle="Warm off-black — same hierarchy, no pure black">
+        <DCArtboard id="dk1" label="19 · Wardrobe · dark" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('19 · Wardrobe dark', <Wardrobe dark/>)}</DCArtboard>
+        <DCArtboard id="dk2" label="20 · Generate · dark" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('20 · Generate dark', <Generate withResults dark/>)}</DCArtboard>
+        <DCArtboard id="dk3" label="21 · Outfit detail · dark" width={PHONE_W} height={PHONE_H} style={PHONE_STYLE}>{Phone$('21 · Outfit dark', <OutfitDetail view="flatlay" dark/>)}</DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

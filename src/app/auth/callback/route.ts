@@ -6,6 +6,8 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/wardrobe";
 
+  let exchangeError: { message: string; status?: number } | null = null;
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -23,11 +25,18 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`);
       }
     }
+    exchangeError = { message: error.message, status: error.status };
+    console.error("[auth/callback] exchangeCodeForSession failed:", error);
+  } else {
+    console.error("[auth/callback] no code in URL", {
+      params: Object.fromEntries(searchParams.entries()),
+    });
   }
 
-  // Auth failed — forward Supabase's error details to /login so it can show a useful message.
+  // Auth failed — forward error details to /login so it can show a useful message.
   const errorCode = searchParams.get("error_code") || searchParams.get("error");
-  const errorDescription = searchParams.get("error_description");
+  const errorDescription =
+    searchParams.get("error_description") || exchangeError?.message;
   const params = new URLSearchParams();
   params.set("error", errorCode || "auth-callback-failed");
   if (errorDescription) params.set("error_description", errorDescription);

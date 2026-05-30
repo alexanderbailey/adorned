@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/components/Toast";
 // Inter loaded via globals.css @import
 
 export const metadata: Metadata = {
@@ -33,7 +34,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-canvas text-charcoal font-sans antialiased">{children}</body>
+      <body className="bg-canvas text-charcoal font-sans antialiased">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

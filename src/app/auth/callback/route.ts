@@ -25,6 +25,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // Auth failed — redirect to login with error hint
-  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
+  // Auth failed — forward Supabase's error details to /login so it can show a useful message.
+  const errorCode = searchParams.get("error_code") || searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
+  const params = new URLSearchParams();
+  params.set("error", errorCode || "auth-callback-failed");
+  if (errorDescription) params.set("error_description", errorDescription);
+  return NextResponse.redirect(`${origin}/login?${params.toString()}`);
 }

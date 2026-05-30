@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import type { ItemCategory } from "@/lib/types";
+import type { ItemCategory, ItemSeason } from "@/lib/types";
+import { FilterSheet, type FilterDomain } from "./FilterSheet";
 
 const CATEGORIES: { label: string; value: ItemCategory | "all" }[] = [
   { label: "All",        value: "all" },
@@ -18,7 +19,23 @@ const CATEGORIES: { label: string; value: ItemCategory | "all" }[] = [
 ];
 
 interface PageProps {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    subcategory?: string;
+    color?: string;
+    season?: string;
+  }>;
+}
+
+interface WardrobeItem {
+  id: string;
+  cutout_image_url: string;
+  thumb_image_url: string | null;
+  category: ItemCategory;
+  subcategory: string | null;
+  primary_color_hex: string | null;
+  primary_color_name: string | null;
+  season: ItemSeason[] | null;
 }
 
 export default async function WardrobePage({ searchParams }: PageProps) {
@@ -26,21 +43,31 @@ export default async function WardrobePage({ searchParams }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { category } = await searchParams;
+  const { category, subcategory, color, season } = await searchParams;
   const activeCategory = (category ?? "all") as ItemCategory | "all";
 
-  let query = supabase
+  // Pull every non-archived item once — derive both the gallery and the
+  // filter domain from the same dataset. 80-item wardrobes don't need a join.
+  const { data: allItemsRaw } = await supabase
     .from("items")
-    .select("id, cutout_image_url, thumb_image_url, category, subcategory, primary_color_hex")
+    .select(
+      "id, cutout_image_url, thumb_image_url, category, subcategory, primary_color_hex, primary_color_name, season"
+    )
     .eq("user_id", user.id)
     .eq("archived", false)
     .order("created_at", { ascending: false });
 
-  if (activeCategory !== "all") {
-    query = query.eq("category", activeCategory);
-  }
+  const allItems = (allItemsRaw ?? []) as WardrobeItem[];
 
-  const { data: items } = await query;
+  const items = allItems.filter((it) => {
+    if (activeCategory !== "all" && it.category !== activeCategory) return false;
+    if (subcategory && it.subcategory !== subcategory) return false;
+    if (color && it.primary_color_name !== color) return false;
+    if (season && !(it.season ?? []).includes(season as ItemSeason)) return false;
+    return true;
+  });
+
+  const filterDomain: FilterDomain = buildFilterDomain(allItems, activeCategory);
 
   return (
     <div className="flex flex-col min-h-screen bg-canvas">
@@ -55,11 +82,7 @@ export default async function WardrobePage({ searchParams }: PageProps) {
                 <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
               </svg>
             </button>
-            <button className="w-9 h-9 flex items-center justify-center text-charcoal">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5h16M7 12h10M10 19h4"/>
-              </svg>
-            </button>
+            <FilterSheet domain={filterDomain} />
           </div>
         </div>
         {/* Title + count */}
@@ -99,9 +122,11 @@ export default async function WardrobePage({ searchParams }: PageProps) {
       {!items?.length ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6">
           <p className="text-[14px] text-mid text-center">
-            {activeCategory === "all"
+            {allItems.length === 0
               ? "Your wardrobe is empty. Add your first item."
-              : `No ${activeCategory} yet.`}
+              : subcategory || color || season
+                ? "No items match these filters."
+                : `No ${activeCategory} yet.`}
           </p>
         </div>
       ) : (
@@ -128,4 +153,31 @@ export default async function WardrobePage({ searchParams }: PageProps) {
       )}
     </div>
   );
+}
+
+function buildFilterDomain(
+  items: WardrobeItem[],
+  activeCategory: ItemCategory | "all"
+): FilterDomain {
+  // Filter domain narrows by category so chips reflect what's actually in view.
+  const scoped =
+    activeCategory === "all"
+      ? items
+      : items.filter((it) => it.category === activeCategory);
+
+  const subcategories = Array.from(
+    new Set(scoped.map((it) => it.subcategory).filter((s): s is string => !!s))
+  ).sort();
+
+  const colorMap = new Map<string, string>();
+  for (const it of scoped) {
+    if (it.primary_color_name && it.primary_color_hex && !colorMap.has(it.primary_color_name)) {
+      colorMap.set(it.primary_color_name, it.primary_color_hex);
+    }
+  }
+  const colors = Array.from(colorMap, ([name, hex]) => ({ name, hex })).sort(
+    (a, b) => a.name.localeCompare(b.name)
+  );
+
+  return { subcategories, colors };
 }

@@ -1,13 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+function describeAuthError(code: string | null, fallback?: string | null): string {
+  switch (code) {
+    case "otp_expired":
+      return "That magic link has expired. Enter your email to get a new one.";
+    case "access_denied":
+      return "Sign-in was cancelled. Try again below.";
+    case "auth-callback-failed":
+      return "We couldn't complete sign-in. Please request a new link.";
+    default:
+      return fallback || "Something went wrong signing in. Please try again.";
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+    const errorCode = hash.get("error_code") || query.get("error");
+    const errorDescription =
+      hash.get("error_description") || query.get("error_description");
+
+    if (errorCode) {
+      setError(describeAuthError(errorCode, errorDescription));
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

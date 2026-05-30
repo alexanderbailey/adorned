@@ -44,8 +44,20 @@ interface BottomTabBarProps {
   fabHref?: string;
 }
 
-export function BottomTabBar({ fabHref = "/wardrobe/add" }: BottomTabBarProps) {
+function deriveFabHref(pathname: string | null, override?: string): string | null {
+  if (override) return override;
+  if (!pathname) return "/wardrobe/add";
+  // Hide on routes where "add" doesn't apply.
+  if (pathname.startsWith("/outfits/builder")) return null;
+  if (pathname.startsWith("/wardrobe/add")) return null;
+  if (pathname.startsWith("/outfits")) return "/outfits/builder";
+  if (pathname.startsWith("/wardrobe")) return "/wardrobe/add";
+  return null;
+}
+
+export function BottomTabBar({ fabHref }: BottomTabBarProps) {
   const pathname = usePathname();
+  const resolvedFab = deriveFabHref(pathname, fabHref);
 
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-canvas border-t border-hairline pb-safe z-40">
@@ -74,15 +86,17 @@ export function BottomTabBar({ fabHref = "/wardrobe/add" }: BottomTabBarProps) {
       </div>
 
       {/* FAB — fixed above nav */}
-      <Link
-        href={fabHref}
-        className="absolute right-4 -top-16 w-13 h-13 rounded-full bg-charcoal text-surface flex items-center justify-center shadow-lg"
-        style={{ width: 52, height: 52, bottom: "calc(60px + max(env(safe-area-inset-bottom, 0px), 16px) + 12px)", top: "auto" }}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-      </Link>
+      {resolvedFab && (
+        <Link
+          href={resolvedFab}
+          className="absolute right-4 -top-16 w-13 h-13 rounded-full bg-charcoal text-surface flex items-center justify-center shadow-lg"
+          style={{ width: 52, height: 52, bottom: "calc(60px + max(env(safe-area-inset-bottom, 0px), 16px) + 12px)", top: "auto" }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </Link>
+      )}
     </nav>
   );
 }

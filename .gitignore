@@ -26,6 +26,9 @@ yarn-error.log*
 # local env
 .env*.local
 
+# local test photos
+/photos
+
 # vercel
 .vercel
 

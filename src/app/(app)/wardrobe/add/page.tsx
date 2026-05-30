@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import type { BgRemovalProgress } from "@/lib/bg-removal";
 import type { ItemTags } from "@/lib/claude/tag-item";
+import { uploadViaApi } from "@/lib/upload";
 
 type Stage =
   | { type: "idle" }
@@ -47,13 +48,13 @@ export default function AddItemPage() {
 
         // Update preview to cutout
         URL.revokeObjectURL(origUrl);
-        const cutoutUrl = URL.createObjectURL(cutoutBlob);
-        setPreview(cutoutUrl);
+        const cutoutPreviewUrl = URL.createObjectURL(cutoutBlob);
+        setPreview(cutoutPreviewUrl);
 
         // 2. Generate thumb
         const thumbBlob = await generateThumb(cutoutBlob);
 
-        // 3. Upload to Supabase Storage
+        // 3. Upload to Supabase Storage via server route
         setStage({ type: "uploading" });
         const supabase = createClient();
         const {
@@ -62,41 +63,25 @@ export default function AddItemPage() {
         if (!user) throw new Error("Not authenticated");
 
         const itemId = crypto.randomUUID();
-        const base = `${user.id}/${itemId}`;
-
         const ext = "webp";
-        const [origUpload, cutoutUpload, thumbUpload] = await Promise.all([
-          supabase.storage
-            .from("items")
-            .upload(`${base}/original.${ext}`, file, { contentType: file.type }),
-          supabase.storage
-            .from("items")
-            .upload(`${base}/cutout.${ext}`, cutoutBlob, { contentType: "image/webp" }),
-          supabase.storage
-            .from("items")
-            .upload(`${base}/thumb.${ext}`, thumbBlob, { contentType: "image/webp" }),
+        const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
+          uploadViaApi("items", `${itemId}/original.${ext}`, file, {
+            contentType: file.type,
+          }),
+          uploadViaApi("items", `${itemId}/cutout.${ext}`, cutoutBlob, {
+            contentType: "image/webp",
+          }),
+          uploadViaApi("items", `${itemId}/thumb.${ext}`, thumbBlob, {
+            contentType: "image/webp",
+          }).catch(() => null),
         ]);
-
-        if (origUpload.error) throw origUpload.error;
-        if (cutoutUpload.error) throw cutoutUpload.error;
-
-        const { data: cutoutData } = supabase.storage
-          .from("items")
-          .getPublicUrl(`${base}/cutout.${ext}`);
-        const { data: origData } = supabase.storage
-          .from("items")
-          .getPublicUrl(`${base}/original.${ext}`);
-        const thumbUrl = !thumbUpload.error
-          ? supabase.storage.from("items").getPublicUrl(`${base}/thumb.${ext}`).data
-              .publicUrl
-          : null;
 
         // 4. Call Claude Haiku to tag
         setStage({ type: "tagging" });
         const tagRes = await fetch("/api/items/tag", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cutout_image_url: cutoutData.publicUrl }),
+          body: JSON.stringify({ cutout_image_url: cutoutUrl }),
         });
         if (!tagRes.ok) throw new Error("Tagging failed");
         const tags: ItemTags = await tagRes.json();
@@ -104,8 +89,8 @@ export default function AddItemPage() {
         // 5. Navigate to review page with all data in sessionStorage
         const payload = {
           itemId,
-          originalImageUrl: origData.publicUrl,
-          cutoutImageUrl: cutoutData.publicUrl,
+          originalImageUrl: originalUrl,
+          cutoutImageUrl: cutoutUrl,
           thumbImageUrl: thumbUrl,
           tags,
         };
@@ -218,6 +203,18 @@ export default function AddItemPage() {
               </svg>
               Choose from gallery
             </button>
+            <Link
+              href="/wardrobe/add/bulk"
+              className="w-full h-12 border border-border-strong text-charcoal text-[15px] font-medium tracking-[-0.1px] rounded-[6px] flex items-center justify-center gap-2"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="7" height="7" rx="1"/>
+                <rect x="14" y="4" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              Add many
+            </Link>
           </div>
         )}
 

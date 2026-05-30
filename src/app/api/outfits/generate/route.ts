@@ -5,6 +5,7 @@ import {
   type WardrobeItemForGen,
   type ProfileForGen,
 } from "@/lib/claude/generate-outfit";
+import { isEmailAllowed } from "@/lib/auth/allowlist";
 import type { PaletteSwatch, PromptChips } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isEmailAllowed(user.email)) {
+    return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
   const body = await request.json();

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { synthesizeStyle } from "@/lib/claude/synthesize-style";
+import { isEmailAllowed } from "@/lib/auth/allowlist";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -9,6 +10,9 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isEmailAllowed(user.email)) {
+    return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
   const body = await request.json();

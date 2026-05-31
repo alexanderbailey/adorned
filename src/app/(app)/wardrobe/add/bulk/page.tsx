@@ -198,28 +198,37 @@ async function processItem(
   update: (id: string, patch: Partial<QueueItem>) => void
 ) {
   try {
-    // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG).
-    const normalized = await normalizeImage(item.file);
+    // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
+    const { file: normalized, looksLikeCutout } = await normalizeImage(item.file);
 
-    // 1. Background removal
-    update(item.id, { status: { kind: "removing", progress: 0 } });
-    const cutoutBlob = await removeBackground(normalized, (p) => {
-      const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
-      update(item.id, { status: { kind: "removing", progress: pct } });
-    });
+    // 1. Background removal — skip if the input is already a cutout
+    //    (running bg-removal on a transparent image makes things worse).
+    let cutoutBlob: Blob;
+    if (looksLikeCutout) {
+      update(item.id, { status: { kind: "uploading" } });
+      cutoutBlob = normalized;
+    } else {
+      update(item.id, { status: { kind: "removing", progress: 0 } });
+      cutoutBlob = await removeBackground(normalized, (p) => {
+        const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
+        update(item.id, { status: { kind: "removing", progress: pct } });
+      });
+    }
     const thumbBlob = await generateThumb(cutoutBlob);
 
     // 2. Upload to Supabase Storage via server route
     update(item.id, { status: { kind: "uploading" } });
-    const ext = "webp";
+    const cutoutExt = cutoutBlob.type === "image/png" ? "png" : "webp";
+    const cutoutType = cutoutBlob.type || "image/webp";
+    const origExt = normalized.type === "image/png" ? "png" : "jpg";
     const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-      uploadViaApi("items", `${item.itemId}/original.${ext}`, normalized, {
+      uploadViaApi("items", `${item.itemId}/original.${origExt}`, normalized, {
         contentType: normalized.type,
       }),
-      uploadViaApi("items", `${item.itemId}/cutout.${ext}`, cutoutBlob, {
-        contentType: "image/webp",
+      uploadViaApi("items", `${item.itemId}/cutout.${cutoutExt}`, cutoutBlob, {
+        contentType: cutoutType,
       }),
-      uploadViaApi("items", `${item.itemId}/thumb.${ext}`, thumbBlob, {
+      uploadViaApi("items", `${item.itemId}/thumb.webp`, thumbBlob, {
         contentType: "image/webp",
       }).catch(() => null),
     ]);

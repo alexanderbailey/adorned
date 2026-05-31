@@ -26,6 +26,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const tags = await tagItem(cutout_image_url);
-  return NextResponse.json(tags);
+  try {
+    const tags = await tagItem(cutout_image_url);
+    return NextResponse.json(tags);
+  } catch (err) {
+    console.error("[items/tag] failed:", err);
+    const message = err instanceof Error ? err.message : "Tagging failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

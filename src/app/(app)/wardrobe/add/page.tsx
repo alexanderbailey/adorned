@@ -32,23 +32,29 @@ export default function AddItemPage() {
       setPreview(origUrl);
 
       try {
-        // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG).
-        const normalized = await normalizeImage(file);
+        // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
+        const { file: normalized, looksLikeCutout } = await normalizeImage(file);
 
-        // 1. Remove background
-        setStage({ type: "removing", progress: 0, label: "Loading model…" });
-
-        const cutoutBlob = await removeBackground(
-          normalized,
-          (p: BgRemovalProgress) => {
-            const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
-            const label =
-              p.type === "loading"
-                ? `Downloading model… ${pct}%`
-                : `Removing background… ${pct}%`;
-            setStage({ type: "removing", progress: pct, label });
-          }
-        );
+        // 1. Remove background — skip if the input already has transparent
+        //    corners (running bg-removal on a cutout makes the edges worse).
+        let cutoutBlob: Blob;
+        if (looksLikeCutout) {
+          setStage({ type: "removing", progress: 100, label: "Already a cutout — skipping bg removal" });
+          cutoutBlob = normalized;
+        } else {
+          setStage({ type: "removing", progress: 0, label: "Loading model…" });
+          cutoutBlob = await removeBackground(
+            normalized,
+            (p: BgRemovalProgress) => {
+              const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
+              const label =
+                p.type === "loading"
+                  ? `Downloading model… ${pct}%`
+                  : `Removing background… ${pct}%`;
+              setStage({ type: "removing", progress: pct, label });
+            }
+          );
+        }
 
         // Update preview to cutout
         URL.revokeObjectURL(origUrl);
@@ -67,15 +73,17 @@ export default function AddItemPage() {
         if (!user) throw new Error("Not authenticated");
 
         const itemId = crypto.randomUUID();
-        const ext = "webp";
+        const cutoutExt = cutoutBlob.type === "image/png" ? "png" : "webp";
+        const cutoutType = cutoutBlob.type || "image/webp";
+        const origExt = normalized.type === "image/png" ? "png" : "jpg";
         const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-          uploadViaApi("items", `${itemId}/original.${ext}`, normalized, {
+          uploadViaApi("items", `${itemId}/original.${origExt}`, normalized, {
             contentType: normalized.type,
           }),
-          uploadViaApi("items", `${itemId}/cutout.${ext}`, cutoutBlob, {
-            contentType: "image/webp",
+          uploadViaApi("items", `${itemId}/cutout.${cutoutExt}`, cutoutBlob, {
+            contentType: cutoutType,
           }),
-          uploadViaApi("items", `${itemId}/thumb.${ext}`, thumbBlob, {
+          uploadViaApi("items", `${itemId}/thumb.webp`, thumbBlob, {
             contentType: "image/webp",
           }).catch(() => null),
         ]);

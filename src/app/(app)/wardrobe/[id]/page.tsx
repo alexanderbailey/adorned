@@ -3,6 +3,12 @@ import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { DeleteItemButton } from "./DeleteItemButton";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PencilSquareIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -46,18 +52,14 @@ export default async function ItemDetailPage({ params }: PageProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-2 pt-[54px] h-[98px]">
         <Link href="/wardrobe" className="w-10 h-10 flex items-center justify-center text-charcoal">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6"/>
-          </svg>
+          <ChevronLeftIcon className="w-[22px] h-[22px]" />
         </Link>
         <div className="flex items-center">
           <Link
             href={`/wardrobe/${id}/edit`}
             className="w-10 h-10 flex items-center justify-center text-charcoal"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/>
-            </svg>
+            <PencilSquareIcon className="w-[18px] h-[18px]" />
           </Link>
           <DeleteItemButton itemId={id} />
         </div>
@@ -117,9 +119,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
         {item.ai_description && (
           <div className="px-5">
             <div className="flex items-center gap-1.5 mb-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-                <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
-              </svg>
+              <SparklesIcon className="w-[14px] h-[14px] text-accent" />
               <span className="text-[11px] font-semibold tracking-[1.2px] uppercase text-mid">
                 From your wardrobe
               </span>
@@ -134,9 +134,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
             <span className="text-[13px]">
               Used in <strong className="font-semibold">{outfitCount}</strong> outfit{outfitCount !== 1 ? "s" : ""}
             </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-mid">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
+            <ChevronRightIcon className="w-[14px] h-[14px] text-mid" />
           </div>
         )}
 

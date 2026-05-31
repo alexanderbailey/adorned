@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
+import { HeartIcon as HeartOutline, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
+import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
 
 export function OutfitActions({
   outfitId,
@@ -55,29 +57,18 @@ export function OutfitActions({
         className="w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label={favorited ? "Unfavourite" : "Favourite"}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill={favorited ? "currentColor" : "none"}
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
+        {favorited ? (
+          <HeartSolid className="w-5 h-5" />
+        ) : (
+          <HeartOutline className="w-5 h-5" />
+        )}
       </button>
       <button
         onClick={() => setMenuOpen((v) => !v)}
         className="w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label="More"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="5" cy="12" r="1.6" />
-          <circle cx="12" cy="12" r="1.6" />
-          <circle cx="19" cy="12" r="1.6" />
-        </svg>
+        <EllipsisHorizontalIcon className="w-5 h-5" />
       </button>
 
       {menuOpen && (

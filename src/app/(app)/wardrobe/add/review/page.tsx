@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import type { ItemCategory, ItemFormality, ItemSeason } from "@/lib/types";
 import { clsx } from "clsx";
+import { XMarkIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 const CATEGORIES: ItemCategory[] = [
   "tops", "bottoms", "skirts", "dresses", "outerwear",
@@ -84,20 +85,14 @@ export default function ReviewPage() {
     }
   }
 
-  const SparkleIcon = () => (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
-    </svg>
-  );
+  const SparkleIcon = () => <SparklesIcon className="w-3 h-3 text-accent" />;
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-[54px] h-[98px] border-b border-hairline">
         <Link href="/wardrobe/add" className="w-10 h-10 flex items-center justify-center text-charcoal">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 6l12 12M18 6L6 18"/>
-          </svg>
+          <XMarkIcon className="w-[22px] h-[22px]" />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">Review item</span>
         <button
@@ -243,9 +238,7 @@ function Field({
         </span>
         {suggested && (
           <span className="flex items-center gap-1 text-[10px] text-accent font-medium">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
-            </svg>
+            <SparklesIcon className="w-2.5 h-2.5" />
             Suggested
           </span>
         )}

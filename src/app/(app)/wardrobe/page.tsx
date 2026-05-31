@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { ItemCategory, ItemSeason } from "@/lib/types";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { FilterSheet, type FilterDomain } from "./FilterSheet";
 
 const CATEGORIES: { label: string; value: ItemCategory | "all" }[] = [
@@ -77,10 +78,8 @@ export default async function WardrobePage({ searchParams }: PageProps) {
         <div className="flex items-center justify-between h-9">
           <span className="text-[22px] font-medium tracking-[-0.4px] italic">Adorned</span>
           <div className="flex gap-1">
-            <button className="w-9 h-9 flex items-center justify-center text-charcoal">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
-              </svg>
+            <button className="w-9 h-9 flex items-center justify-center text-charcoal" aria-label="Search">
+              <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
             <FilterSheet domain={filterDomain} />
           </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory } from "@/lib/types";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 export interface BuilderItem {
   id: string;
@@ -109,9 +110,7 @@ export function Builder({ items }: { items: BuilderItem[] }) {
           href="/outfits"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          <XMarkIcon className="w-[22px] h-[22px]" />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">New outfit</span>
         <button

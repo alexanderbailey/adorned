@@ -1,4 +1,9 @@
 import Link from "next/link";
+import {
+  ChevronLeftIcon,
+  ArrowUpTrayIcon,
+  PlusCircleIcon,
+} from "@heroicons/react/24/outline";
 
 export default function InstallPage() {
   return (
@@ -8,9 +13,7 @@ export default function InstallPage() {
           href="/profile"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+          <ChevronLeftIcon className="w-[22px] h-[22px]" />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">Install on iPhone</span>
         <div className="w-10" />
@@ -44,10 +47,7 @@ export default function InstallPage() {
             body="The square icon with an arrow pointing up, in the bottom toolbar of Safari."
             iconLabel="Share"
             icon={
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v13M8 7l4-4 4 4" />
-                <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
-              </svg>
+              <ArrowUpTrayIcon className="w-[22px] h-[22px]" />
             }
           />
           <Step
@@ -56,10 +56,7 @@ export default function InstallPage() {
             body="It may be a few rows down in the share sheet."
             iconLabel="Add"
             icon={
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="3" />
-                <path d="M12 8v8M8 12h8" />
-              </svg>
+              <PlusCircleIcon className="w-[22px] h-[22px]" />
             }
           />
           <Step

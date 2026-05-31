@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { UserIcon } from "@heroicons/react/24/outline";
 
 export default function BodyPage() {
   const router = useRouter();
@@ -107,10 +108,7 @@ export default function BodyPage() {
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
             <div className="w-[140px] h-[180px] bg-surface-alt rounded flex items-center justify-center text-mid">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="7" r="3.5" />
-                <path d="M5 21c0-3.6 3.1-6 7-6s7 2.4 7 6" />
-              </svg>
+              <UserIcon className="w-10 h-10" />
             </div>
             <button
               onClick={() => fileRef.current?.click()}

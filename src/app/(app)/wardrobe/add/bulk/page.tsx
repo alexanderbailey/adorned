@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import type { ItemTags } from "@/lib/claude/tag-item";
 
 const CONCURRENCY = 3;
@@ -281,18 +282,7 @@ function Header({ title, backHref }: { title: string; backHref: string }) {
         href={backHref}
         className="w-10 h-10 flex items-center justify-center text-charcoal"
       >
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
+        <XMarkIcon className="w-[22px] h-[22px]" />
       </Link>
       <span className="text-[15px] font-semibold tracking-[-0.2px]">{title}</span>
       <div className="w-10" />

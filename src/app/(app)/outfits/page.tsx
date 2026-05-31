@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ItemCategory } from "@/lib/types";
+import { HeartIcon } from "@heroicons/react/24/solid";
 
 interface OutfitItem {
   item_id: string;
@@ -139,9 +140,7 @@ export default async function OutfitsPage({ searchParams }: PageProps) {
                     </span>
                   )}
                   {outfit.favorited && (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-accent">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
+                    <HeartIcon className="w-2.5 h-2.5 text-accent" />
                   )}
                   {outfit.source === "generated" && (
                     <span className="text-[10px] text-accent">AI</span>

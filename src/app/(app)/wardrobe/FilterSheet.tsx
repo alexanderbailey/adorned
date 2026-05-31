@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
+import { FunnelIcon } from "@heroicons/react/24/outline";
 import type { ItemSeason } from "@/lib/types";
 
 const SEASONS: ItemSeason[] = ["spring", "summer", "fall", "winter"];
@@ -57,9 +58,7 @@ export function FilterSheet({ domain }: { domain: FilterDomain }) {
         className="relative w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label="Filters"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 5h16M7 12h10M10 19h4" />
-        </svg>
+        <FunnelIcon className="w-5 h-5" />
         {activeFilterCount > 0 && (
           <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full bg-accent" />
         )}

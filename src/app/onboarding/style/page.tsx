@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 type Phase = "input" | "synthesizing" | "review";
 
@@ -273,9 +274,7 @@ export default function StylePage() {
                     className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-charcoal/80 text-canvas rounded-full"
                     aria-label="Remove"
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-                      <path d="M6 6l12 12M18 6L6 18" />
-                    </svg>
+                    <XMarkIcon className="w-3 h-3" />
                   </button>
                 </div>
               ))}

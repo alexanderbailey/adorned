@@ -3,41 +3,47 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import {
+  RectangleStackIcon as LayersOutline,
+  SparklesIcon as SparklesOutline,
+  UserIcon as UserOutline,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
+import {
+  RectangleStackIcon as LayersSolid,
+  SparklesIcon as SparklesSolid,
+  UserIcon as UserSolid,
+} from "@heroicons/react/24/solid";
 
-// Custom SVG icons matching the design prototype (Phosphor-style, 1.5 stroke)
-const HangerIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 9V8a2 2 0 1 1 2 2"/>
-    <path d="M12 9L3 17a1 1 0 0 0 .7 1.7h16.6A1 1 0 0 0 21 17l-9-8z"/>
+// No Heroicons match for a clothes hanger — keep this one custom.
+const HangerOutline = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M12 9V8a2 2 0 1 1 2 2" />
+    <path d="M12 9L3 17a1 1 0 0 0 .7 1.7h16.6A1 1 0 0 0 21 17l-9-8z" />
   </svg>
 );
-const LayersIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3l9 5-9 5-9-5 9-5z"/>
-    <path d="M3 13l9 5 9-5M3 18l9 5 9-5"/>
-  </svg>
-);
-const WandIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 21L15 9M14 6l4 4M17 3v3M21 7h-3M5 14v2M4 15h2M19 13v2M18 14h2"/>
-  </svg>
-);
-const UserIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="8" r="4"/>
-    <path d="M4 21a8 8 0 0 1 16 0"/>
+const HangerSolid = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M10.5 7.5a1.5 1.5 0 1 1 2.46 1.16l-.06.05a.75.75 0 0 0-.27.57v.43L3.46 17.43a1.5 1.5 0 0 0 1.04 2.57h15a1.5 1.5 0 0 0 1.04-2.57l-9.17-7.72v-.13a3 3 0 1 0-3.87-2.83v.25a.75.75 0 0 0 1.5 0v-.25c0-.13.05-.25.13-.33A1.5 1.5 0 0 1 10.5 7.5z"
+    />
   </svg>
 );
 
-const tabs = [
-  { href: "/wardrobe", label: "Wardrobe", Icon: HangerIcon },
-  { href: "/outfits",  label: "Outfits",  Icon: LayersIcon },
-  { href: "/generate", label: "Generate", Icon: WandIcon },
-  { href: "/profile",  label: "Profile",  Icon: UserIcon },
+interface TabSpec {
+  href: string;
+  label: string;
+  Outline: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  Solid: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
+
+const tabs: TabSpec[] = [
+  { href: "/wardrobe", label: "Wardrobe", Outline: HangerOutline,  Solid: HangerSolid },
+  { href: "/outfits",  label: "Outfits",  Outline: LayersOutline,   Solid: LayersSolid },
+  { href: "/generate", label: "Generate", Outline: SparklesOutline, Solid: SparklesSolid },
+  { href: "/profile",  label: "Profile",  Outline: UserOutline,     Solid: UserSolid },
 ];
 
 interface BottomTabBarProps {
@@ -47,7 +53,6 @@ interface BottomTabBarProps {
 function deriveFabHref(pathname: string | null, override?: string): string | null {
   if (override) return override;
   if (!pathname) return "/wardrobe/add";
-  // Hide on routes where "add" doesn't apply.
   if (pathname.startsWith("/outfits/builder")) return null;
   if (pathname.startsWith("/wardrobe/add")) return null;
   if (pathname.startsWith("/outfits")) return "/outfits/builder";
@@ -62,8 +67,9 @@ export function BottomTabBar({ fabHref }: BottomTabBarProps) {
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-canvas border-t border-hairline pb-safe z-40">
       <div className="grid grid-cols-4 h-[60px]">
-        {tabs.map(({ href, label, Icon }) => {
+        {tabs.map(({ href, label, Outline, Solid }) => {
           const active = pathname.startsWith(href);
+          const Icon = active ? Solid : Outline;
           return (
             <Link
               key={href}
@@ -73,11 +79,13 @@ export function BottomTabBar({ fabHref }: BottomTabBarProps) {
                 active ? "text-charcoal" : "text-subtle"
               )}
             >
-              <Icon active={active} />
-              <span className={clsx(
-                "text-[10px] tracking-[0.1px]",
-                active ? "font-semibold" : "font-medium"
-              )}>
+              <Icon className="w-[22px] h-[22px]" />
+              <span
+                className={clsx(
+                  "text-[10px] tracking-[0.1px]",
+                  active ? "font-semibold" : "font-medium"
+                )}
+              >
                 {label}
               </span>
             </Link>
@@ -89,12 +97,11 @@ export function BottomTabBar({ fabHref }: BottomTabBarProps) {
       {resolvedFab && (
         <Link
           href={resolvedFab}
-          className="absolute right-4 -top-16 w-13 h-13 rounded-full bg-charcoal text-surface flex items-center justify-center shadow-lg"
+          className="absolute right-4 -top-16 rounded-full bg-charcoal text-surface flex items-center justify-center shadow-lg"
           style={{ width: 52, height: 52, bottom: "calc(60px + max(env(safe-area-inset-bottom, 0px), 16px) + 12px)", top: "auto" }}
+          aria-label="Add"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+          <PlusIcon className="w-6 h-6" />
         </Link>
       )}
     </nav>

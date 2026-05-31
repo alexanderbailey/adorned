@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { PALETTE_PRESETS } from "@/lib/palette-presets";
 import type { PaletteSwatch } from "@/lib/types";
 import { Icon } from "@/components/Icon";
@@ -11,6 +12,17 @@ export function BrowseSeasonsSheet({
   onImport: (swatches: PaletteSwatch[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // Prevent background scroll while sheet is open.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   function handlePick(id: string) {
     const preset = PALETTE_PRESETS.find((p) => p.id === id);
@@ -19,26 +31,15 @@ export function BrowseSeasonsSheet({
     setOpen(false);
   }
 
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="h-10 px-3.5 border border-border-strong text-charcoal text-[13px] font-medium rounded-[6px] flex items-center gap-2"
+  const sheet = open && (
+    <div
+      className="fixed inset-0 z-[100] flex items-end bg-charcoal/30"
+      onClick={() => setOpen(false)}
+    >
+      <div
+        className="w-full bg-canvas rounded-t-2xl max-h-[85vh] overflow-y-auto pb-safe"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Icon name="palette" size={16} />
-        Browse seasons
-      </button>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end bg-charcoal/30"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full bg-canvas rounded-t-2xl max-h-[85vh] overflow-y-auto pb-safe"
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-hairline sticky top-0 bg-canvas">
               <div className="w-10" />
               <span className="text-[15px] font-semibold tracking-[-0.2px]">
@@ -85,7 +86,19 @@ export function BrowseSeasonsSheet({
             </div>
           </div>
         </div>
-      )}
+  );
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="h-10 px-3.5 border border-border-strong text-charcoal text-[13px] font-medium rounded-[6px] flex items-center gap-2"
+      >
+        <Icon name="palette" size={16} />
+        Browse seasons
+      </button>
+      {mounted && sheet ? createPortal(sheet, document.body) : null}
     </>
   );
 }

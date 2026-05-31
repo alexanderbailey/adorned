@@ -13,7 +13,12 @@ const CATEGORIES: ItemCategory[] = [
   "tops", "bottoms", "skirts", "dresses", "outerwear",
   "shoes", "bags", "accessories", "jewellery",
 ];
-const SEASONS: ItemSeason[] = ["spring", "summer", "fall", "winter"];
+const SEASONS: { value: ItemSeason; label: string }[] = [
+  { value: "spring", label: "Spring" },
+  { value: "summer", label: "Summer" },
+  { value: "fall",   label: "Autumn" },
+  { value: "winter", label: "Winter" },
+];
 const FORMALITIES: ItemFormality[] = ["casual", "smart-casual", "formal"];
 
 interface ReviewPayload {
@@ -174,31 +179,45 @@ export default function ReviewPage() {
             />
           </Field>
 
-          {/* Season + Formality side by side */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Season">
-              <select
-                value={tags.season[0] ?? "spring"}
-                onChange={(e) => setTags({ ...tags, season: [e.target.value as ItemSeason] })}
-                className="w-full bg-transparent text-[14px] text-charcoal capitalize outline-none"
-              >
-                {SEASONS.map((s) => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Formality">
-              <select
-                value={tags.formality}
-                onChange={(e) => setTags({ ...tags, formality: e.target.value as ItemFormality })}
-                className="w-full bg-transparent text-[14px] text-charcoal outline-none"
-              >
-                {FORMALITIES.map((f) => (
-                  <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          <Field label="Seasons" suggested>
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              {SEASONS.map((s) => {
+                const active = tags.season?.includes(s.value) ?? false;
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => {
+                      const current = new Set(tags.season ?? []);
+                      if (current.has(s.value)) current.delete(s.value);
+                      else current.add(s.value);
+                      setTags({ ...tags, season: Array.from(current) });
+                    }}
+                    className={clsx(
+                      "h-8 px-3 rounded-full border text-[13px] transition-colors",
+                      active
+                        ? "bg-charcoal text-surface border-charcoal font-medium"
+                        : "bg-transparent text-charcoal border-border-strong"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field label="Formality">
+            <select
+              value={tags.formality}
+              onChange={(e) => setTags({ ...tags, formality: e.target.value as ItemFormality })}
+              className="w-full bg-transparent text-[14px] text-charcoal outline-none"
+            >
+              {FORMALITIES.map((f) => (
+                <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+              ))}
+            </select>
+          </Field>
 
           {/* AI description */}
           <div className="p-3.5 bg-surface-alt border border-hairline rounded-lg">

@@ -61,7 +61,14 @@ export async function tagItem(imageUrl: string): Promise<ItemTags> {
   const text = message.content
     .filter((b) => b.type === "text")
     .map((b) => (b as { type: "text"; text: string }).text)
-    .join("");
+    .join("")
+    .trim();
 
-  return JSON.parse(text) as ItemTags;
+  try {
+    return JSON.parse(text) as ItemTags;
+  } catch {
+    // Strip markdown code fences if the model wrapped its JSON despite instructions.
+    const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+    return JSON.parse(cleaned) as ItemTags;
+  }
 }

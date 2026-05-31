@@ -199,12 +199,12 @@ async function processItem(
 ) {
   try {
     // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
-    const { file: normalized, looksLikeCutout } = await normalizeImage(item.file);
+    const { file: normalized, hasAlpha } = await normalizeImage(item.file);
 
-    // 1. Background removal — skip if the input is already a cutout
-    //    (running bg-removal on a transparent image makes things worse).
+    // 1. Background removal — skip if the input already has transparency
+    //    anywhere (running bg-removal on a cutout fills the holes with black).
     let cutoutBlob: Blob;
-    if (looksLikeCutout) {
+    if (hasAlpha) {
       update(item.id, { status: { kind: "uploading" } });
       cutoutBlob = normalized;
     } else {

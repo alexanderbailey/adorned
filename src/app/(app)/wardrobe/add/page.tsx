@@ -33,12 +33,12 @@ export default function AddItemPage() {
 
       try {
         // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
-        const { file: normalized, looksLikeCutout } = await normalizeImage(file);
+        const { file: normalized, hasAlpha } = await normalizeImage(file);
 
-        // 1. Remove background — skip if the input already has transparent
-        //    corners (running bg-removal on a cutout makes the edges worse).
+        // 1. Remove background — skip if the input already has any transparency
+        //    (running bg-removal on a cutout fills the holes with black).
         let cutoutBlob: Blob;
-        if (looksLikeCutout) {
+        if (hasAlpha) {
           setStage({ type: "removing", progress: 100, label: "Already a cutout — skipping bg removal" });
           cutoutBlob = normalized;
         } else {

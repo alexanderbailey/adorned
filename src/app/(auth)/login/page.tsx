@@ -137,7 +137,7 @@ export default function LoginPage() {
             </form>
 
             <p className="text-xs text-mid text-center">
-              Or tap the magic link in the email if you're in a regular browser.
+              Or tap the magic link in the email if you&apos;re in a regular browser.
             </p>
 
             <button

@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { PALETTE_PRESETS } from "@/lib/palette-presets";
 import type { PaletteSwatch } from "@/lib/types";
-import { clsx } from "clsx";
 import { Icon } from "@/components/Icon";
+import { BrowseSeasonsSheet } from "./BrowseSeasonsSheet";
+import { PaletteImageUpload } from "./PaletteImageUpload";
 
 export default function PalettePage() {
   const router = useRouter();
-  const [presetId, setPresetId] = useState<string | null>(null);
   const [swatches, setSwatches] = useState<PaletteSwatch[]>([]);
   const [newHex, setNewHex] = useState("#888888");
   const [newName, setNewName] = useState("");
@@ -25,22 +24,22 @@ export default function PalettePage() {
       if (!user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("palette_preset, palette_swatches, onboarded_at")
+        .select("palette_swatches, onboarded_at")
         .eq("id", user.id)
         .single();
       if (profile?.onboarded_at) setIsEditing(true);
-      if (profile?.palette_preset) setPresetId(profile.palette_preset);
       if (profile?.palette_swatches) {
         setSwatches(profile.palette_swatches as PaletteSwatch[]);
       }
     })();
   }, []);
 
-  function selectPreset(id: string) {
-    const preset = PALETTE_PRESETS.find((p) => p.id === id);
-    if (!preset) return;
-    setPresetId(id);
-    setSwatches(preset.swatches);
+  function importSwatches(incoming: PaletteSwatch[]) {
+    setSwatches((prev) => {
+      const existing = new Set(prev.map((s) => s.hex.toLowerCase()));
+      const additions = incoming.filter((s) => !existing.has(s.hex.toLowerCase()));
+      return [...prev, ...additions];
+    });
   }
 
   function removeSwatch(index: number) {
@@ -49,12 +48,12 @@ export default function PalettePage() {
 
   function addSwatch() {
     if (!newName.trim()) return;
-    setSwatches((prev) => [...prev, { name: newName.trim(), hex: newHex }]);
+    importSwatches([{ name: newName.trim(), hex: newHex }]);
     setNewName("");
   }
 
   async function handleContinue() {
-    if (!presetId) return;
+    if (swatches.length === 0) return;
     setSaving(true);
     setError(null);
     try {
@@ -64,10 +63,7 @@ export default function PalettePage() {
 
       const { error: dbError } = await supabase
         .from("profiles")
-        .update({
-          palette_preset: presetId,
-          palette_swatches: swatches,
-        })
+        .update({ palette_swatches: swatches })
         .eq("id", user.id);
       if (dbError) throw dbError;
 
@@ -83,52 +79,29 @@ export default function PalettePage() {
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
         <section className="space-y-3">
           <p className="text-[14px] text-mid">
-            Pick the season that feels closest. You can tweak the swatches after.
+            Build your colour palette — these are the colours that flatter you.
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            {PALETTE_PRESETS.map((p) => {
-              const active = presetId === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => selectPreset(p.id)}
-                  className={clsx(
-                    "text-left p-3 rounded-lg border transition-colors",
-                    active
-                      ? "border-charcoal bg-surface"
-                      : "border-hairline bg-canvas"
-                  )}
-                >
-                  <div className="grid grid-cols-6 gap-[3px] mb-2 w-fit">
-                    {p.swatches.map((s, i) => (
-                      <span
-                        key={i}
-                        className="w-3 h-3 rounded-full"
-                        style={{
-                          background: s.hex,
-                          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-[13px] font-medium text-charcoal leading-tight">
-                    {p.label}
-                  </p>
-                  <p className="text-[11px] text-mid mt-0.5 leading-snug">
-                    {p.description}
-                  </p>
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap gap-2">
+            <BrowseSeasonsSheet onImport={importSwatches} />
+            <PaletteImageUpload existingSwatches={swatches} onImport={importSwatches} />
           </div>
         </section>
 
-        {presetId && (
-          <section className="space-y-3">
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between">
             <h2 className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
               Your swatches
             </h2>
+            <span className="text-[11px] text-mid font-mono tabular-nums">
+              {swatches.length}
+            </span>
+          </div>
 
+          {swatches.length === 0 ? (
+            <p className="text-[13px] text-mid italic">
+              No colours yet. Browse a season, upload an image, or add one manually.
+            </p>
+          ) : (
             <div className="flex flex-wrap gap-2">
               {swatches.map((s, i) => (
                 <div
@@ -153,39 +126,39 @@ export default function PalettePage() {
                 </div>
               ))}
             </div>
+          )}
 
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="color"
-                value={newHex}
-                onChange={(e) => setNewHex(e.target.value)}
-                className="w-9 h-9 rounded border border-hairline bg-transparent cursor-pointer"
-                aria-label="Pick colour"
-              />
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Name (e.g. dusty rose)"
-                className="flex-1 h-9 px-3 text-[13px] border border-hairline rounded bg-surface text-charcoal outline-none focus:border-charcoal"
-              />
-              <button
-                onClick={addSwatch}
-                disabled={!newName.trim()}
-                className="h-9 px-3 text-[13px] border border-border-strong rounded text-charcoal disabled:opacity-30"
-              >
-                Add
-              </button>
-            </div>
-          </section>
-        )}
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="color"
+              value={newHex}
+              onChange={(e) => setNewHex(e.target.value)}
+              className="w-9 h-9 rounded border border-hairline bg-transparent cursor-pointer"
+              aria-label="Pick colour"
+            />
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Name (e.g. dusty rose)"
+              className="flex-1 h-9 px-3 text-[13px] border border-hairline rounded bg-surface text-charcoal outline-none focus:border-charcoal"
+            />
+            <button
+              onClick={addSwatch}
+              disabled={!newName.trim()}
+              className="h-9 px-3 text-[13px] border border-border-strong rounded text-charcoal disabled:opacity-30"
+            >
+              Add
+            </button>
+          </div>
+        </section>
       </div>
 
       <div className="px-5 py-4 border-t border-hairline">
         {error && <p className="text-[13px] text-danger mb-2">{error}</p>}
         <button
           onClick={handleContinue}
-          disabled={!presetId || saving}
+          disabled={swatches.length === 0 || saving}
           className="w-full h-12 bg-charcoal text-surface text-[15px] font-medium rounded-[6px] disabled:opacity-40"
         >
           {saving ? "Saving…" : isEditing ? "Save" : "Continue"}

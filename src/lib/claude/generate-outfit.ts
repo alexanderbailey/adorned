@@ -53,12 +53,12 @@ function formatProfile(profile: ProfileForGen): string {
   if (profile.style_summary) {
     lines.push(`Style summary:\n${profile.style_summary}`);
   }
-  if (profile.palette_preset || profile.palette_swatches.length > 0) {
+  if (profile.palette_swatches.length > 0) {
     const swatches = profile.palette_swatches
       .map((s) => `${s.name} (${s.hex})`)
       .join(", ");
     lines.push(
-      `Palette: ${profile.palette_preset ?? "(custom)"}${swatches ? ` — ${swatches}` : ""}`
+      `Palette: ${swatches}`
     );
   }
   return lines.join("\n\n") || "(no profile data)";

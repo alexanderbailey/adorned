@@ -108,20 +108,20 @@ export default function LoginPage() {
                   htmlFor="code"
                   className="block text-xs uppercase tracking-widest text-mid"
                 >
-                  6-digit code
+                  Code from email
                 </label>
                 <input
                   id="code"
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
+                  pattern="[0-9]+"
+                  maxLength={10}
                   required
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  className="w-full border border-hairline bg-canvas px-4 py-3 text-charcoal text-center tracking-[0.5em] font-mono text-lg placeholder-mid focus:border-charcoal focus:outline-none transition-colors"
-                  placeholder="123456"
+                  className="w-full border border-hairline bg-canvas px-4 py-3 text-charcoal text-center tracking-[0.35em] font-mono text-lg placeholder-mid focus:border-charcoal focus:outline-none transition-colors"
+                  placeholder="12345678"
                 />
               </div>
 
@@ -129,7 +129,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={verifying || code.length !== 6}
+                disabled={verifying || code.length < 6}
                 className="w-full bg-charcoal text-canvas py-3 text-sm uppercase tracking-widest hover:bg-accent transition-colors disabled:opacity-50"
               >
                 {verifying ? "Signing in…" : "Sign in"}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 type Phase = "input" | "synthesizing" | "review";
 
@@ -274,7 +274,7 @@ export default function StylePage() {
                     className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-charcoal/80 text-canvas rounded-full"
                     aria-label="Remove"
                   >
-                    <XMarkIcon className="w-3 h-3" />
+                    <Icon name="close" size={12} />
                   </button>
                 </div>
               ))}

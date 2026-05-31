@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PALETTE_PRESETS } from "@/lib/palette-presets";
 import type { PaletteSwatch } from "@/lib/types";
 import { clsx } from "clsx";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 export default function PalettePage() {
   const router = useRouter();
@@ -148,7 +148,7 @@ export default function PalettePage() {
                     className="w-6 h-6 flex items-center justify-center text-mid"
                     aria-label={`Remove ${s.name}`}
                   >
-                    <XMarkIcon className="w-3 h-3" />
+                    <Icon name="close" size={12} />
                   </button>
                 </div>
               ))}

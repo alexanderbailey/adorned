@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
-import { HeartIcon as HeartOutline, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
-import { HeartIcon as HeartSolid } from "@heroicons/react/24/solid";
+import { Icon } from "@/components/Icon";
 
 export function OutfitActions({
   outfitId,
@@ -57,18 +56,14 @@ export function OutfitActions({
         className="w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label={favorited ? "Unfavourite" : "Favourite"}
       >
-        {favorited ? (
-          <HeartSolid className="w-5 h-5" />
-        ) : (
-          <HeartOutline className="w-5 h-5" />
-        )}
+        <Icon name="favorite" filled={favorited} size={20} />
       </button>
       <button
         onClick={() => setMenuOpen((v) => !v)}
         className="w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label="More"
       >
-        <EllipsisHorizontalIcon className="w-5 h-5" />
+        <Icon name="more_horiz" size={20} />
       </button>
 
       {menuOpen && (

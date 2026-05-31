@@ -9,13 +9,7 @@ import type { BgRemovalProgress } from "@/lib/bg-removal";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
-import {
-  XMarkIcon,
-  CameraIcon,
-  PhotoIcon,
-  Squares2X2Icon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 type Stage =
   | { type: "idle" }
@@ -144,7 +138,7 @@ export default function AddItemPage() {
           href="/wardrobe"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <XMarkIcon className="w-[22px] h-[22px]" />
+          <Icon name="close" size={22} />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">
           Add to wardrobe
@@ -180,7 +174,7 @@ export default function AddItemPage() {
 
         {stage.type === "tagging" && (
           <div className="flex items-center gap-2 text-[13px] text-mid">
-            <SparklesIcon className="w-[14px] h-[14px] text-accent animate-spin" />
+            <Icon name="auto_awesome" size={14} className="text-accent animate-spin" />
             Identifying item…
           </div>
         )}
@@ -204,7 +198,7 @@ export default function AddItemPage() {
               onClick={() => fileRef.current?.click()}
               className="w-full h-12 bg-charcoal text-surface text-[15px] font-medium tracking-[-0.1px] rounded-[6px] flex items-center justify-center gap-2"
             >
-              <CameraIcon className="w-5 h-5" />
+              <Icon name="photo_camera" size={20} />
               Take photo
             </button>
             <button
@@ -216,14 +210,14 @@ export default function AddItemPage() {
               }}
               className="w-full h-12 border border-border-strong text-charcoal text-[15px] font-medium tracking-[-0.1px] rounded-[6px] flex items-center justify-center gap-2"
             >
-              <PhotoIcon className="w-5 h-5" />
+              <Icon name="photo_library" size={20} />
               Choose from gallery
             </button>
             <Link
               href="/wardrobe/add/bulk"
               className="w-full h-12 border border-border-strong text-charcoal text-[15px] font-medium tracking-[-0.1px] rounded-[6px] flex items-center justify-center gap-2"
             >
-              <Squares2X2Icon className="w-5 h-5" />
+              <Icon name="grid_view" size={20} />
               Add many
             </Link>
           </div>

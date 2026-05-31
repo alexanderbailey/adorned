@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { TrashIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 export function DeleteItemButton({ itemId }: { itemId: string }) {
   const router = useRouter();
@@ -30,9 +30,9 @@ export function DeleteItemButton({ itemId }: { itemId: string }) {
       {deleting ? (
         <div className="w-4 h-4 border-2 border-hairline border-t-danger rounded-full animate-spin" />
       ) : confirming ? (
-        <CheckIcon className="w-[18px] h-[18px]" />
+        <Icon name="check" size={18} />
       ) : (
-        <TrashIcon className="w-[18px] h-[18px]" />
+        <Icon name="delete" size={18} />
       )}
     </button>
   );

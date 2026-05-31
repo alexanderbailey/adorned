@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 import type { ItemTags } from "@/lib/claude/tag-item";
 
 const CONCURRENCY = 3;
@@ -282,7 +282,7 @@ function Header({ title, backHref }: { title: string; backHref: string }) {
         href={backHref}
         className="w-10 h-10 flex items-center justify-center text-charcoal"
       >
-        <XMarkIcon className="w-[22px] h-[22px]" />
+        <Icon name="close" size={22} />
       </Link>
       <span className="text-[15px] font-semibold tracking-[-0.2px]">{title}</span>
       <div className="w-10" />

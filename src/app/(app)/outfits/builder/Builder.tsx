@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory } from "@/lib/types";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 export interface BuilderItem {
   id: string;
@@ -110,7 +110,7 @@ export function Builder({ items }: { items: BuilderItem[] }) {
           href="/outfits"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <XMarkIcon className="w-[22px] h-[22px]" />
+          <Icon name="close" size={22} />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">New outfit</span>
         <button

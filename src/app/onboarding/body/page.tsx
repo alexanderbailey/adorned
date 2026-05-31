@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { UserIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 export default function BodyPage() {
   const router = useRouter();
@@ -108,7 +108,7 @@ export default function BodyPage() {
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-8">
             <div className="w-[140px] h-[180px] bg-surface-alt rounded flex items-center justify-center text-mid">
-              <UserIcon className="w-10 h-10" />
+              <Icon name="person" size={40} />
             </div>
             <button
               onClick={() => fileRef.current?.click()}

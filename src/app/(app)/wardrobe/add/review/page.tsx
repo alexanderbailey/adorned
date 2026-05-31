@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import type { ItemCategory, ItemFormality, ItemSeason } from "@/lib/types";
 import { clsx } from "clsx";
-import { XMarkIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 const CATEGORIES: ItemCategory[] = [
   "tops", "bottoms", "skirts", "dresses", "outerwear",
@@ -85,14 +85,14 @@ export default function ReviewPage() {
     }
   }
 
-  const SparkleIcon = () => <SparklesIcon className="w-3 h-3 text-accent" />;
+  const SparkleIcon = () => <Icon name="auto_awesome" size={12} className="text-accent" />;
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-[54px] h-[98px] border-b border-hairline">
         <Link href="/wardrobe/add" className="w-10 h-10 flex items-center justify-center text-charcoal">
-          <XMarkIcon className="w-[22px] h-[22px]" />
+          <Icon name="close" size={22} />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">Review item</span>
         <button
@@ -238,7 +238,7 @@ function Field({
         </span>
         {suggested && (
           <span className="flex items-center gap-1 text-[10px] text-accent font-medium">
-            <SparklesIcon className="w-2.5 h-2.5" />
+            <Icon name="auto_awesome" size={10} />
             Suggested
           </span>
         )}

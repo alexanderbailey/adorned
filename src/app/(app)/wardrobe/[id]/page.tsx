@@ -3,12 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { DeleteItemButton } from "./DeleteItemButton";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PencilSquareIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -52,14 +47,14 @@ export default async function ItemDetailPage({ params }: PageProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-2 pt-[54px] h-[98px]">
         <Link href="/wardrobe" className="w-10 h-10 flex items-center justify-center text-charcoal">
-          <ChevronLeftIcon className="w-[22px] h-[22px]" />
+          <Icon name="chevron_left" size={22} />
         </Link>
         <div className="flex items-center">
           <Link
             href={`/wardrobe/${id}/edit`}
             className="w-10 h-10 flex items-center justify-center text-charcoal"
           >
-            <PencilSquareIcon className="w-[18px] h-[18px]" />
+            <Icon name="edit" size={18} />
           </Link>
           <DeleteItemButton itemId={id} />
         </div>
@@ -119,7 +114,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
         {item.ai_description && (
           <div className="px-5">
             <div className="flex items-center gap-1.5 mb-2">
-              <SparklesIcon className="w-[14px] h-[14px] text-accent" />
+              <Icon name="auto_awesome" size={14} className="text-accent" />
               <span className="text-[11px] font-semibold tracking-[1.2px] uppercase text-mid">
                 From your wardrobe
               </span>
@@ -134,7 +129,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
             <span className="text-[13px]">
               Used in <strong className="font-semibold">{outfitCount}</strong> outfit{outfitCount !== 1 ? "s" : ""}
             </span>
-            <ChevronRightIcon className="w-[14px] h-[14px] text-mid" />
+            <Icon name="chevron_right" size={14} className="text-mid" />
           </div>
         )}
 

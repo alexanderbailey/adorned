@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  ChevronLeftIcon,
-  ArrowUpTrayIcon,
-  PlusCircleIcon,
-} from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 export default function InstallPage() {
   return (
@@ -13,7 +9,7 @@ export default function InstallPage() {
           href="/profile"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <ChevronLeftIcon className="w-[22px] h-[22px]" />
+          <Icon name="chevron_left" size={22} />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">Install on iPhone</span>
         <div className="w-10" />
@@ -47,7 +43,7 @@ export default function InstallPage() {
             body="The square icon with an arrow pointing up, in the bottom toolbar of Safari."
             iconLabel="Share"
             icon={
-              <ArrowUpTrayIcon className="w-[22px] h-[22px]" />
+              <Icon name="ios_share" size={22} />
             }
           />
           <Step
@@ -56,7 +52,7 @@ export default function InstallPage() {
             body="It may be a few rows down in the share sheet."
             iconLabel="Add"
             icon={
-              <PlusCircleIcon className="w-[22px] h-[22px]" />
+              <Icon name="add_box" size={22} />
             }
           />
           <Step

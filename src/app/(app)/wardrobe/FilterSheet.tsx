@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
-import { FunnelIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 import type { ItemSeason } from "@/lib/types";
 
 const SEASONS: ItemSeason[] = ["spring", "summer", "fall", "winter"];
@@ -58,7 +58,7 @@ export function FilterSheet({ domain }: { domain: FilterDomain }) {
         className="relative w-9 h-9 flex items-center justify-center text-charcoal"
         aria-label="Filters"
       >
-        <FunnelIcon className="w-5 h-5" />
+        <Icon name="tune" size={20} />
         {activeFilterCount > 0 && (
           <span className="absolute top-1 right-1 w-[7px] h-[7px] rounded-full bg-accent" />
         )}

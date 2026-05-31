@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { ItemCategory } from "@/lib/types";
 import { OutfitActions } from "./OutfitActions";
 import { WearLog, type WearLogEntry } from "./WearLog";
-import { ChevronLeftIcon } from "@heroicons/react/24/outline";
+import { Icon } from "@/components/Icon";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -72,7 +72,7 @@ export default async function OutfitDetailPage({ params }: PageProps) {
           href="/outfits"
           className="w-10 h-10 flex items-center justify-center text-charcoal"
         >
-          <ChevronLeftIcon className="w-[22px] h-[22px]" />
+          <Icon name="chevron_left" size={22} />
         </Link>
         <span className="text-[15px] font-semibold tracking-[-0.2px]">
           {outfit.source === "generated" ? "AI outfit" : "Outfit"}

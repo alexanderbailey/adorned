@@ -8,6 +8,7 @@ import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import type { BgRemovalProgress } from "@/lib/bg-removal";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import { uploadViaApi } from "@/lib/upload";
+import { normalizeImage } from "@/lib/normalize-image";
 
 type Stage =
   | { type: "idle" }
@@ -31,11 +32,14 @@ export default function AddItemPage() {
       setPreview(origUrl);
 
       try {
+        // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG).
+        const normalized = await normalizeImage(file);
+
         // 1. Remove background
         setStage({ type: "removing", progress: 0, label: "Loading model…" });
 
         const cutoutBlob = await removeBackground(
-          file,
+          normalized,
           (p: BgRemovalProgress) => {
             const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
             const label =
@@ -65,8 +69,8 @@ export default function AddItemPage() {
         const itemId = crypto.randomUUID();
         const ext = "webp";
         const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-          uploadViaApi("items", `${itemId}/original.${ext}`, file, {
-            contentType: file.type,
+          uploadViaApi("items", `${itemId}/original.${ext}`, normalized, {
+            contentType: normalized.type,
           }),
           uploadViaApi("items", `${itemId}/cutout.${ext}`, cutoutBlob, {
             contentType: "image/webp",
@@ -83,7 +87,15 @@ export default function AddItemPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ cutout_image_url: cutoutUrl }),
         });
-        if (!tagRes.ok) throw new Error("Tagging failed");
+        if (!tagRes.ok) {
+          const body = await tagRes.text();
+          let detail = body;
+          try {
+            const parsed = JSON.parse(body) as { error?: string };
+            if (parsed.error) detail = parsed.error;
+          } catch {}
+          throw new Error(`Tagging failed: ${detail.slice(0, 200)}`);
+        }
         const tags: ItemTags = await tagRes.json();
 
         // 5. Navigate to review page with all data in sessionStorage

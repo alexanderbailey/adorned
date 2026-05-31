@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import { uploadViaApi } from "@/lib/upload";
+import { normalizeImage } from "@/lib/normalize-image";
 import type { ItemTags } from "@/lib/claude/tag-item";
 
 const CONCURRENCY = 3;
@@ -197,9 +198,12 @@ async function processItem(
   update: (id: string, patch: Partial<QueueItem>) => void
 ) {
   try {
+    // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG).
+    const normalized = await normalizeImage(item.file);
+
     // 1. Background removal
     update(item.id, { status: { kind: "removing", progress: 0 } });
-    const cutoutBlob = await removeBackground(item.file, (p) => {
+    const cutoutBlob = await removeBackground(normalized, (p) => {
       const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
       update(item.id, { status: { kind: "removing", progress: pct } });
     });
@@ -209,8 +213,8 @@ async function processItem(
     update(item.id, { status: { kind: "uploading" } });
     const ext = "webp";
     const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-      uploadViaApi("items", `${item.itemId}/original.${ext}`, item.file, {
-        contentType: item.file.type,
+      uploadViaApi("items", `${item.itemId}/original.${ext}`, normalized, {
+        contentType: normalized.type,
       }),
       uploadViaApi("items", `${item.itemId}/cutout.${ext}`, cutoutBlob, {
         contentType: "image/webp",
@@ -227,7 +231,15 @@ async function processItem(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cutout_image_url: cutoutUrl }),
     });
-    if (!tagRes.ok) throw new Error("Tagging failed");
+    if (!tagRes.ok) {
+      const body = await tagRes.text();
+      let detail = body;
+      try {
+        const parsed = JSON.parse(body) as { error?: string };
+        if (parsed.error) detail = parsed.error;
+      } catch {}
+      throw new Error(`Tagging failed: ${detail.slice(0, 200)}`);
+    }
     const tags: ItemTags = await tagRes.json();
 
     update(item.id, {

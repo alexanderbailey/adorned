@@ -12,11 +12,8 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Adorned",
   },
-  icons: {
-    apple: [
-      { url: "/icons/icon.svg", sizes: "any" },
-    ],
-  },
+  // Favicon + Apple touch icon are picked up automatically from
+  // src/app/icon.png and src/app/apple-icon.png via Next.js conventions.
 };
 
 export const viewport: Viewport = {

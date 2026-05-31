@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getPaletteById } from "@/lib/palette-presets";
 import type { PaletteSwatch } from "@/lib/types";
 
 export default async function ProfilePage() {
@@ -15,12 +14,11 @@ export default async function ProfilePage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "palette_preset, palette_swatches, style_description, style_summary, body_photo_url, onboarded_at"
+      "palette_swatches, style_description, style_summary, body_photo_url, onboarded_at"
     )
     .eq("id", user.id)
     .single();
 
-  const preset = getPaletteById(profile?.palette_preset ?? null);
   const swatches = (profile?.palette_swatches ?? []) as PaletteSwatch[];
 
   return (
@@ -34,28 +32,25 @@ export default async function ProfilePage() {
 
       <div className="flex-1 px-5 py-3 space-y-3">
         <Section title="Palette" editHref="/onboarding/palette">
-          {preset ? (
-            <>
-              <p className="text-[14px] text-charcoal">{preset.label}</p>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {swatches.slice(0, 12).map((s, i) => (
-                  <span
-                    key={`${s.hex}-${i}`}
-                    className="w-5 h-5 rounded-full"
-                    style={{
-                      background: s.hex,
-                      boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
-                    }}
-                    title={s.name}
-                  />
-                ))}
-                {swatches.length > 12 && (
-                  <span className="text-[11px] text-mid font-mono tabular-nums self-center">
-                    +{swatches.length - 12}
-                  </span>
-                )}
-              </div>
-            </>
+          {swatches.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {swatches.slice(0, 12).map((s, i) => (
+                <span
+                  key={`${s.hex}-${i}`}
+                  className="w-5 h-5 rounded-full"
+                  style={{
+                    background: s.hex,
+                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
+                  }}
+                  title={s.name}
+                />
+              ))}
+              {swatches.length > 12 && (
+                <span className="text-[11px] text-mid font-mono tabular-nums self-center">
+                  +{swatches.length - 12}
+                </span>
+              )}
+            </div>
           ) : (
             <p className="text-[13px] text-mid">Not set yet.</p>
           )}

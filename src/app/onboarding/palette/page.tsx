@@ -63,7 +63,7 @@ export default function PalettePage() {
 
       const { error: dbError } = await supabase
         .from("profiles")
-        .update({ palette_swatches: swatches })
+        .update({ palette_swatches: swatches, palette_preset: null })
         .eq("id", user.id);
       if (dbError) throw dbError;
 

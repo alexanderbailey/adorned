@@ -194,7 +194,7 @@ export default function ReviewPage() {
                       setTags({ ...tags, season: Array.from(current) });
                     }}
                     className={clsx(
-                      "h-8 px-3 rounded-full border text-[13px] transition-colors",
+                      "inline-flex items-center h-8 px-3 rounded-full border text-[13px] leading-none transition-colors",
                       active
                         ? "bg-charcoal text-surface border-charcoal font-medium"
                         : "bg-transparent text-charcoal border-border-strong"

@@ -104,7 +104,7 @@ export default async function WardrobePage({ searchParams }: PageProps) {
               <Link
                 key={value}
                 href={value === "all" ? "/wardrobe" : `/wardrobe?category=${value}`}
-                className={`shrink-0 h-8 px-3.5 rounded-full border text-[13px] transition-colors ${
+                className={`shrink-0 inline-flex items-center h-8 px-3.5 rounded-full border text-[13px] leading-none transition-colors ${
                   active
                     ? "bg-charcoal text-surface border-charcoal font-medium"
                     : "bg-transparent text-charcoal border-border-strong"

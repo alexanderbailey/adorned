@@ -244,7 +244,7 @@ export default function GeneratePage() {
                     key={v}
                     onClick={() => toggleChip(key, v)}
                     className={clsx(
-                      "h-8 px-3 rounded-full border text-[13px] capitalize transition-colors",
+                      "inline-flex items-center h-8 px-3 rounded-full border text-[13px] capitalize leading-none transition-colors",
                       active
                         ? "bg-charcoal text-surface border-charcoal font-medium"
                         : "bg-transparent text-charcoal border-border-strong"

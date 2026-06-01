@@ -218,27 +218,37 @@ function FlatLayThumbnail({ items }: { items: OutfitItem[] }) {
   );
 
   return (
-    <div className="absolute inset-0 p-2">
-      <div className="absolute top-2 left-0 right-12 flex justify-center gap-1 px-2">
-        {tops.slice(0, 2).map((i) => (
-          <ItemMini key={i.item_id} url={pickUrl(i)} size={36} />
-        ))}
+    <div className="absolute inset-0">
+      <div className="absolute inset-0 flex flex-col items-center justify-start pt-1.5">
+        {tops.length > 0 && (
+          <div className="flex justify-center gap-0.5">
+            {tops.slice(0, 2).map((i) => (
+              <ItemMini key={i.item_id} url={pickUrl(i)} size={52} />
+            ))}
+          </div>
+        )}
+        {mid.length > 0 && (
+          <div className="flex justify-center gap-0.5">
+            {mid.slice(0, 2).map((i) => (
+              <ItemMini key={i.item_id} url={pickUrl(i)} size={52} />
+            ))}
+          </div>
+        )}
+        {shoes.length > 0 && (
+          <div className="flex justify-center gap-0.5">
+            {shoes.slice(0, 2).map((i) => (
+              <ItemMini key={i.item_id} url={pickUrl(i)} size={40} />
+            ))}
+          </div>
+        )}
       </div>
-      <div className="absolute top-1/2 left-0 right-12 -translate-y-1/2 flex justify-center gap-1 px-2">
-        {mid.slice(0, 2).map((i) => (
-          <ItemMini key={i.item_id} url={pickUrl(i)} size={36} />
-        ))}
-      </div>
-      <div className="absolute bottom-6 left-0 right-12 flex justify-center gap-1 px-2">
-        {shoes.slice(0, 2).map((i) => (
-          <ItemMini key={i.item_id} url={pickUrl(i)} size={28} />
-        ))}
-      </div>
-      <div className="absolute top-2 right-1 flex flex-col gap-1">
-        {side.slice(0, 3).map((i) => (
-          <ItemMini key={i.item_id} url={pickUrl(i)} size={20} />
-        ))}
-      </div>
+      {side.length > 0 && (
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-0.5">
+          {side.slice(0, 3).map((i) => (
+            <ItemMini key={i.item_id} url={pickUrl(i)} size={30} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -250,12 +260,12 @@ function pickUrl(i: OutfitItem): string {
 function ItemMini({ url, size }: { url: string; size: number }) {
   if (!url) return null;
   return (
-    <span
-      className="block bg-white rounded-sm overflow-hidden"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="block object-contain shrink-0"
       style={{ width: size, height: size * (4 / 3) }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" className="w-full h-full object-contain p-0.5" />
-    </span>
+    />
   );
 }

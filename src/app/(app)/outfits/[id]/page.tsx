@@ -91,7 +91,7 @@ export default async function OutfitDetailPage({ params }: PageProps) {
       </div>
 
       {/* Flat-lay hero */}
-      <div className="relative h-[360px] bg-surface-alt border-b border-hairline">
+      <div className="relative h-[420px] bg-surface-alt border-b border-hairline overflow-hidden">
         <FlatLayHero items={items} />
       </div>
 
@@ -176,31 +176,46 @@ function FlatLayHero({ items }: { items: OutfitItemDetail[] }) {
 
   return (
     <>
-      <div className="absolute top-4 left-0 right-16 flex justify-center gap-2 px-3">
-        {tops.slice(0, 3).map((i) => (
-          <HeroItem key={i.item_id} url={pickUrl(i)} w={70} />
-        ))}
+      {/* Main column: top → mid → shoes, touching */}
+      <div className="absolute inset-0 flex flex-col items-center justify-start pt-3">
+        {tops.length > 0 && (
+          <div className="flex justify-center gap-1 px-3">
+            {tops.slice(0, 3).map((i) => (
+              <HeroItem key={i.item_id} url={pickUrl(i)} w={110} />
+            ))}
+          </div>
+        )}
+        {mid.length > 0 && (
+          <div className="flex justify-center gap-1 px-3">
+            {mid.slice(0, 3).map((i) => (
+              <HeroItem key={i.item_id} url={pickUrl(i)} w={110} />
+            ))}
+          </div>
+        )}
+        {shoes.length > 0 && (
+          <div className="flex justify-center gap-1 px-3">
+            {shoes.slice(0, 3).map((i) => (
+              <HeroItem key={i.item_id} url={pickUrl(i)} w={85} />
+            ))}
+          </div>
+        )}
       </div>
-      <div className="absolute top-1/2 left-0 right-16 -translate-y-1/2 flex justify-center gap-2 px-3">
-        {mid.slice(0, 3).map((i) => (
-          <HeroItem key={i.item_id} url={pickUrl(i)} w={70} />
-        ))}
-      </div>
-      <div className="absolute bottom-4 left-0 right-16 flex justify-center gap-2 px-3">
-        {shoes.slice(0, 3).map((i) => (
-          <HeroItem key={i.item_id} url={pickUrl(i)} w={56} />
-        ))}
-      </div>
-      <div className="absolute top-1/2 right-2 -translate-y-1/2 flex flex-col gap-1.5">
-        {sideRight.slice(0, 3).map((i) => (
-          <HeroItem key={i.item_id} url={pickUrl(i)} w={42} />
-        ))}
-      </div>
-      <div className="absolute top-1/2 left-2 -translate-y-1/2 flex flex-col gap-1.5">
-        {sideLeft.slice(0, 3).map((i) => (
-          <HeroItem key={i.item_id} url={pickUrl(i)} w={42} />
-        ))}
-      </div>
+
+      {/* Side stacks — pulled in 12px from edge */}
+      {sideRight.length > 0 && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+          {sideRight.slice(0, 3).map((i) => (
+            <HeroItem key={i.item_id} url={pickUrl(i)} w={60} />
+          ))}
+        </div>
+      )}
+      {sideLeft.length > 0 && (
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+          {sideLeft.slice(0, 3).map((i) => (
+            <HeroItem key={i.item_id} url={pickUrl(i)} w={60} />
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -212,12 +227,12 @@ function pickUrl(i: OutfitItemDetail): string {
 function HeroItem({ url, w }: { url: string; w: number }) {
   if (!url) return null;
   return (
-    <span
-      className="block bg-white rounded shadow-sm overflow-hidden"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="block object-contain shrink-0"
       style={{ width: w, height: w * (4 / 3) }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" className="w-full h-full object-contain p-1" />
-    </span>
+    />
   );
 }

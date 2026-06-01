@@ -307,7 +307,7 @@ function OutfitCard({
           {resolvedItems.length} items
         </span>
       </div>
-      <div className="relative h-[200px] bg-surface-alt mx-3 rounded">
+      <div className="relative h-[280px] bg-surface-alt mx-3 rounded overflow-hidden">
         <FlatLayMini items={resolvedItems} />
       </div>
       <div className="px-4 py-3">
@@ -344,38 +344,48 @@ function FlatLayMini({ items }: { items: ItemLite[] }) {
 
   return (
     <>
-      <div className="absolute top-2 left-2 right-14 flex justify-center gap-1">
-        {tops.slice(0, 2).map((i) => (
-          <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={48} />
-        ))}
+      <div className="absolute inset-0 flex flex-col items-center justify-start pt-2">
+        {tops.length > 0 && (
+          <div className="flex justify-center gap-1">
+            {tops.slice(0, 2).map((i) => (
+              <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={74} />
+            ))}
+          </div>
+        )}
+        {mid.length > 0 && (
+          <div className="flex justify-center gap-1">
+            {mid.slice(0, 2).map((i) => (
+              <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={74} />
+            ))}
+          </div>
+        )}
+        {shoes.length > 0 && (
+          <div className="flex justify-center gap-1">
+            {shoes.slice(0, 2).map((i) => (
+              <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={54} />
+            ))}
+          </div>
+        )}
       </div>
-      <div className="absolute top-1/2 left-2 right-14 -translate-y-1/2 flex justify-center gap-1">
-        {mid.slice(0, 2).map((i) => (
-          <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={48} />
-        ))}
-      </div>
-      <div className="absolute bottom-2 left-2 right-14 flex justify-center gap-1">
-        {shoes.slice(0, 2).map((i) => (
-          <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={36} />
-        ))}
-      </div>
-      <div className="absolute top-2 right-1 flex flex-col gap-1">
-        {side.slice(0, 3).map((i) => (
-          <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={28} />
-        ))}
-      </div>
+      {side.length > 0 && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+          {side.slice(0, 3).map((i) => (
+            <Mini key={i.id} url={i.thumb_image_url ?? i.cutout_image_url} w={40} />
+          ))}
+        </div>
+      )}
     </>
   );
 }
 
 function Mini({ url, w }: { url: string; w: number }) {
   return (
-    <span
-      className="block bg-white rounded-sm overflow-hidden"
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      className="block object-contain shrink-0"
       style={{ width: w, height: w * (4 / 3) }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt="" className="w-full h-full object-contain p-0.5" />
-    </span>
+    />
   );
 }

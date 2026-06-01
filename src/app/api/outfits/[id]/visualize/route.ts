@@ -11,10 +11,21 @@ export const maxDuration = 60;
 interface OutfitItemRow {
   items: {
     cutout_image_url: string;
+    thumb_image_url: string | null;
     category: ItemCategory;
     subcategory: string | null;
     primary_color_name: string | null;
   } | null;
+}
+
+// Rewrites a Supabase public object URL into a render-with-transform URL so
+// the image is served pre-resized. Helps keep Gemini latency under Vercel's
+// function timeout when the user's body photo is a large phone snap.
+function supabaseResized(url: string, width: number): string {
+  return url.replace(
+    "/storage/v1/object/public/",
+    `/storage/v1/render/image/public/`
+  ) + (url.includes("?") ? "&" : "?") + `width=${width}&resize=contain`;
 }
 
 export async function POST(
@@ -40,7 +51,7 @@ export async function POST(
       .from("outfits")
       .select(
         `id, user_id, prompt, ai_reasoning,
-         outfit_items ( items ( cutout_image_url, category, subcategory, primary_color_name ) )`
+         outfit_items ( items ( cutout_image_url, thumb_image_url, category, subcategory, primary_color_name ) )`
       )
       .eq("id", outfitId)
       .eq("user_id", user.id)
@@ -72,8 +83,9 @@ export async function POST(
     );
   }
 
+  // Prefer thumbs (~400px) over full cutouts to keep Gemini latency low.
   const itemCutoutUrls = outfit.outfit_items
-    .map((oi) => oi.items?.cutout_image_url)
+    .map((oi) => oi.items?.thumb_image_url ?? oi.items?.cutout_image_url)
     .filter((u): u is string => !!u);
   if (itemCutoutUrls.length === 0) {
     return NextResponse.json(
@@ -91,7 +103,7 @@ export async function POST(
 
   try {
     const { imageBytes, mimeType } = await visualizeOutfit({
-      bodyPhotoUrl,
+      bodyPhotoUrl: supabaseResized(bodyPhotoUrl, 640),
       itemCutoutUrls,
       context: context_ || undefined,
     });

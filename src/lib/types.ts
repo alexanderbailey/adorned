@@ -125,6 +125,7 @@ export type Database = {
           prompt_chips: PromptChips;
           ai_reasoning: string | null;
           favorited: boolean;
+          lookbook_url: string | null;
           created_at: string;
         };
         Insert: InsertOf<

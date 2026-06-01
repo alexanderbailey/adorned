@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { ItemCategory } from "@/lib/types";
 import { OutfitActions } from "./OutfitActions";
 import { WearLog, type WearLogEntry } from "./WearLog";
+import { LookbookSection } from "./LookbookSection";
 import { Icon } from "@/components/Icon";
 
 interface PageProps {
@@ -33,25 +34,33 @@ export default async function OutfitDetailPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const { data: outfitRaw } = await supabase
-    .from("outfits")
-    .select(
-      `id, source, prompt, ai_reasoning, favorited, created_at,
-       outfit_items ( item_id, slot, items ( id, cutout_image_url, thumb_image_url, category, subcategory, primary_color_name ) )`
-    )
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  const [{ data: outfitRaw }, { data: wearLogRaw }, { data: profile }] =
+    await Promise.all([
+      supabase
+        .from("outfits")
+        .select(
+          `id, source, prompt, ai_reasoning, favorited, lookbook_url, created_at,
+           outfit_items ( item_id, slot, items ( id, cutout_image_url, thumb_image_url, category, subcategory, primary_color_name ) )`
+        )
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single(),
+      supabase
+        .from("wear_log")
+        .select("id, worn_on")
+        .eq("outfit_id", id)
+        .eq("user_id", user.id)
+        .order("worn_on", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("body_photo_url")
+        .eq("id", user.id)
+        .single(),
+    ]);
 
   if (!outfitRaw) notFound();
-
-  const { data: wearLogRaw } = await supabase
-    .from("wear_log")
-    .select("id, worn_on")
-    .eq("outfit_id", id)
-    .eq("user_id", user.id)
-    .order("worn_on", { ascending: false });
   const wearEntries = (wearLogRaw ?? []) as WearLogEntry[];
+  const hasBodyPhoto = !!profile?.body_photo_url;
 
   const outfit = outfitRaw as unknown as {
     id: string;
@@ -59,6 +68,7 @@ export default async function OutfitDetailPage({ params }: PageProps) {
     prompt: string | null;
     ai_reasoning: string | null;
     favorited: boolean;
+    lookbook_url: string | null;
     created_at: string;
     outfit_items: OutfitItemDetail[];
   };
@@ -105,6 +115,12 @@ export default async function OutfitDetailPage({ params }: PageProps) {
             <p className="text-[13px] text-charcoal italic">&ldquo;{outfit.prompt}&rdquo;</p>
           </section>
         )}
+
+        <LookbookSection
+          outfitId={outfit.id}
+          initialLookbookUrl={outfit.lookbook_url}
+          hasBodyPhoto={hasBodyPhoto}
+        />
 
         <WearLog outfitId={outfit.id} initialEntries={wearEntries} />
 

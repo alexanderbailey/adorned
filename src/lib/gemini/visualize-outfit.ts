@@ -91,8 +91,8 @@ export async function visualizeOutfit(
     contents: [{ role: "user", parts }],
   });
 
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
-  for (const part of parts) {
+  const outParts = response.candidates?.[0]?.content?.parts ?? [];
+  for (const part of outParts) {
     if (part.inlineData?.data) {
       return {
         imageBytes: Buffer.from(part.inlineData.data, "base64"),

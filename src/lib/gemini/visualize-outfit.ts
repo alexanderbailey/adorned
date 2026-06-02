@@ -2,11 +2,17 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
+export interface VisualizeItem {
+  url: string;
+  /** What kind of garment this image represents — e.g. "top", "skirt". */
+  label: string;
+}
+
 export interface VisualizeInput {
   /** URL of the person's body reference photo. */
   bodyPhotoUrl: string;
-  /** URLs of each item's cutout (transparent background, single garment). */
-  itemCutoutUrls: string[];
+  /** Each item's cutout image + a label (category/subcategory). */
+  items: VisualizeItem[];
   /** Optional stylist notes / occasion to add context to the composition. */
   context?: string;
 }
@@ -36,23 +42,53 @@ export async function visualizeOutfit(
 ): Promise<VisualizeOutput> {
   const bodyPart = await fetchAsInlineData(input.bodyPhotoUrl);
   const itemParts = await Promise.all(
-    input.itemCutoutUrls.map((u) => fetchAsInlineData(u))
+    input.items.map((it) => fetchAsInlineData(it.url))
   );
 
-  const promptText = [
-    "Generate a photo-realistic, full-body image of the person in the first photo wearing the clothing items in the following photos.",
-    "Compose the items together as a complete outfit. Preserve the person's face, hair, body shape, and skin tone exactly.",
-    "Match each garment's colour, pattern, and material as accurately as possible.",
-    "Place the person against a neutral, softly-lit studio backdrop (warm off-white).",
-    "Photo-realistic lighting, natural pose, fashion-editorial framing.",
-    input.context ? `\nContext for styling: ${input.context}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  // Build interleaved parts: a header text, the body photo (labelled), then
+  // each item image preceded by its category label. Gemini handles multi-image
+  // composition better when each image is named.
+  const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
+
+  parts.push({
+    text: [
+      "Task: produce a photo-realistic, full-body editorial image of the SAME PERSON shown in the reference photo, now wearing the clothing items shown in the following images.",
+      "",
+      "CRITICAL IDENTITY RULES:",
+      "- The person in the output MUST be the same individual as in the reference photo. Match her face shape, eye colour, eye shape, nose, mouth, complexion, hair colour, hair texture (e.g. curl pattern), hair length, and any visible glasses or accessories. Do NOT generalise to a model.",
+      "- Match her body shape and proportions, height, and build exactly. Do not idealise or slim.",
+      "- Match her skin tone exactly.",
+      "",
+      "GARMENT COMPOSITION RULES:",
+      "- Each subsequent image is a SEPARATE garment, labelled by category. They form ONE complete outfit together.",
+      "- Do NOT merge a top and a skirt into a dress, or a top and trousers into a jumpsuit. A top tucks into or sits over a skirt/trousers at the waist; they remain distinct garments.",
+      "- A dress is a single garment from shoulders to hem.",
+      "- Render each garment with its exact colour, pattern, material, and silhouette as shown in its image.",
+      "- Place shoes on the feet. Place bags/jewellery as a person would naturally hold/wear them.",
+      "",
+      "SCENE:",
+      "- Neutral, softly-lit studio backdrop (warm off-white, light cream, or pale taupe).",
+      "- Natural standing pose, full body visible from head to feet.",
+      "- Photo-realistic lighting, soft shadows, fashion-editorial framing.",
+      input.context ? `\nStyling context: ${input.context}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  });
+
+  parts.push({ text: "Reference photo of the person:" });
+  parts.push({ inlineData: bodyPart.inlineData });
+
+  for (let i = 0; i < input.items.length; i++) {
+    parts.push({ text: `Item ${i + 1} — ${input.items[i].label}:` });
+    parts.push({ inlineData: itemParts[i].inlineData });
+  }
+
+  parts.push({ text: "Generate the final composed image now." });
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
-    contents: [{ role: "user", parts: [{ text: promptText }, bodyPart, ...itemParts] }],
+    contents: [{ role: "user", parts }],
   });
 
   const parts = response.candidates?.[0]?.content?.parts ?? [];

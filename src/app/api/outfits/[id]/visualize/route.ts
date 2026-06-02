@@ -84,10 +84,18 @@ export async function POST(
   }
 
   // Prefer thumbs (~400px) over full cutouts to keep Gemini latency low.
-  const itemCutoutUrls = outfit.outfit_items
-    .map((oi) => oi.items?.thumb_image_url ?? oi.items?.cutout_image_url)
-    .filter((u): u is string => !!u);
-  if (itemCutoutUrls.length === 0) {
+  // Pass each item with a category label so Gemini doesn't merge top+skirt → dress.
+  const visualizeItems = outfit.outfit_items
+    .map((oi) => {
+      const it = oi.items;
+      if (!it) return null;
+      const url = it.thumb_image_url ?? it.cutout_image_url;
+      if (!url) return null;
+      const label = it.subcategory ? `${it.subcategory} (${it.category})` : it.category;
+      return { url, label };
+    })
+    .filter((x): x is { url: string; label: string } => !!x);
+  if (visualizeItems.length === 0) {
     return NextResponse.json(
       { error: "This outfit has no items." },
       { status: 400 }
@@ -103,8 +111,10 @@ export async function POST(
 
   try {
     const { imageBytes, mimeType } = await visualizeOutfit({
-      bodyPhotoUrl: supabaseResized(bodyPhotoUrl, 640),
-      itemCutoutUrls,
+      // 1024px keeps Becca's face/hair detail readable for identity preservation
+      // while still being much smaller than a raw phone photo.
+      bodyPhotoUrl: supabaseResized(bodyPhotoUrl, 1024),
+      items: visualizeItems,
       context: context_ || undefined,
     });
 

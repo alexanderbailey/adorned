@@ -73,7 +73,7 @@ export default async function ProfilePage() {
                 src={profile.body_photo_url}
                 alt="Body reference"
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="120px"
               />
             </div>

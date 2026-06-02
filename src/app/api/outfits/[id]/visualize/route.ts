@@ -18,15 +18,8 @@ interface OutfitItemRow {
   } | null;
 }
 
-// Rewrites a Supabase public object URL into a render-with-transform URL so
-// the image is served pre-resized. Helps keep Gemini latency under Vercel's
-// function timeout when the user's body photo is a large phone snap.
-function supabaseResized(url: string, width: number): string {
-  return url.replace(
-    "/storage/v1/object/public/",
-    `/storage/v1/render/image/public/`
-  ) + (url.includes("?") ? "&" : "?") + `width=${width}&resize=contain`;
-}
+// (Image-transform helper removed — Supabase's render endpoint was cropping
+// the body photo unexpectedly. Sending the original URL through to Gemini.)
 
 export async function POST(
   request: Request,
@@ -111,9 +104,7 @@ export async function POST(
 
   try {
     const { imageBytes, mimeType } = await visualizeOutfit({
-      // 1024px keeps Becca's face/hair detail readable for identity preservation
-      // while still being much smaller than a raw phone photo.
-      bodyPhotoUrl: supabaseResized(bodyPhotoUrl, 1024),
+      bodyPhotoUrl,
       items: visualizeItems,
       context: context_ || undefined,
     });

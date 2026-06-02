@@ -90,12 +90,12 @@ export default function BodyPage() {
 
         {previewUrl || existingPhotoUrl ? (
           <div className="space-y-3">
-            <div className="w-full max-w-[260px] mx-auto aspect-[3/4] bg-surface-alt rounded overflow-hidden">
+            <div className="w-full max-w-[260px] mx-auto aspect-[3/4] bg-surface-alt rounded overflow-hidden flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl ?? existingPhotoUrl!}
                 alt="Body reference"
-                className="w-full h-full object-cover"
+                className="max-w-full max-h-full object-contain"
               />
             </div>
             <button

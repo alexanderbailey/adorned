@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { Icon } from "@/components/Icon";
+import { extractErrorMessage } from "@/lib/error";
 
 interface Props {
   outfitId: string;
@@ -45,11 +46,7 @@ export function LookbookSection({
       });
       if (!res.ok) {
         const body = await res.text();
-        let detail = body;
-        try {
-          const parsed = JSON.parse(body) as { error?: string };
-          if (parsed.error) detail = parsed.error;
-        } catch {}
+        const detail = extractErrorMessage(body) || `HTTP ${res.status}`;
         throw new Error(detail.slice(0, 200));
       }
       const { lookbook_url } = (await res.json()) as { lookbook_url: string };

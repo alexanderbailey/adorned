@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory, PromptChips } from "@/lib/types";
 import { clsx } from "clsx";
+import { extractErrorMessage } from "@/lib/error";
 
 type Phase = "input" | "loading" | "results";
 
@@ -96,12 +97,8 @@ export default function GeneratePage() {
         body: JSON.stringify(req),
       });
       if (!res.ok) {
-        const detail = await res.text();
-        let msg = detail;
-        try {
-          const j = JSON.parse(detail) as { error?: string };
-          if (j.error) msg = j.error;
-        } catch {}
+        const body = await res.text();
+        const msg = extractErrorMessage(body) || `HTTP ${res.status}`;
         throw new Error(msg.slice(0, 300));
       }
       const { outfits: result } = (await res.json()) as { outfits: GeneratedOutfit[] };

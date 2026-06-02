@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Icon } from "@/components/Icon";
+import { extractErrorMessage } from "@/lib/error";
 
 type Phase = "input" | "synthesizing" | "review";
 
@@ -149,13 +150,7 @@ export default function StylePage() {
       });
       if (!res.ok) {
         const body = await res.text();
-        let detail = body;
-        try {
-          const parsed = JSON.parse(body) as { error?: string };
-          if (parsed.error) detail = parsed.error;
-        } catch {
-          // not JSON — keep raw text
-        }
+        const detail = extractErrorMessage(body) || `HTTP ${res.status}`;
         throw new Error(`Synthesis failed (${res.status}): ${detail.slice(0, 200)}`);
       }
       const json = (await res.json()) as { summary: string };

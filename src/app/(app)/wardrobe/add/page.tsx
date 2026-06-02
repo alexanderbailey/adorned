@@ -9,6 +9,7 @@ import type { BgRemovalProgress } from "@/lib/bg-removal";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
+import { extractErrorMessage } from "@/lib/error";
 import { Icon } from "@/components/Icon";
 
 type Stage =
@@ -98,11 +99,7 @@ export default function AddItemPage() {
         });
         if (!tagRes.ok) {
           const body = await tagRes.text();
-          let detail = body;
-          try {
-            const parsed = JSON.parse(body) as { error?: string };
-            if (parsed.error) detail = parsed.error;
-          } catch {}
+          const detail = extractErrorMessage(body) || `HTTP ${tagRes.status}`;
           throw new Error(`Tagging failed: ${detail.slice(0, 200)}`);
         }
         const tags: ItemTags = await tagRes.json();

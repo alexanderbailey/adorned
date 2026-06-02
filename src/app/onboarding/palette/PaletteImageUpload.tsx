@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PaletteSwatch } from "@/lib/types";
 import { Icon } from "@/components/Icon";
 import { clsx } from "clsx";
+import { extractErrorMessage } from "@/lib/error";
 
 type Phase = "idle" | "preview" | "extracting" | "review" | "error";
 
@@ -66,11 +67,7 @@ export function PaletteImageUpload({
       const res = await fetch("/api/palette/extract", { method: "POST", body: form });
       if (!res.ok) {
         const body = await res.text();
-        let detail = body;
-        try {
-          const parsed = JSON.parse(body) as { error?: string };
-          if (parsed.error) detail = parsed.error;
-        } catch {}
+        const detail = extractErrorMessage(body) || `HTTP ${res.status}`;
         throw new Error(detail.slice(0, 200));
       }
       const { swatches } = (await res.json()) as { swatches: PaletteSwatch[] };

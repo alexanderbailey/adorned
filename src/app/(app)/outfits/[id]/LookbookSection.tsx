@@ -12,13 +12,13 @@ interface Props {
 }
 
 type Phase = "idle" | "generating" | "done" | "error";
-type Quality = "standard" | "high";
+type Quality = "standard" | "advanced";
 
 // When the token system lands, swap the `cost` strings for a real currency
 // display. Order here is the order they appear in the UI.
 const QUALITY_OPTIONS: { value: Quality; label: string; cost: string }[] = [
-  { value: "standard", label: "Standard",     cost: "Quick" },
-  { value: "high",     label: "High quality", cost: "Slower, sharper" },
+  { value: "standard", label: "Standard", cost: "Quick" },
+  { value: "advanced", label: "Advanced", cost: "Slower, smarter" },
 ];
 
 export function LookbookSection({
@@ -97,10 +97,10 @@ export function LookbookSection({
           <div className="w-8 h-8 rounded-full border-2 border-hairline border-t-accent animate-spin" />
           <p className="text-[13px] text-mid">
             Styling your lookbook
-            {activeQuality === "high" ? " (high quality)" : ""}…
+            {activeQuality === "advanced" ? " (advanced)" : ""}…
           </p>
           <p className="text-[11px] text-mid">
-            {activeQuality === "high" ? "Usually 30–60 seconds." : "Usually 15–30 seconds."}
+            {activeQuality === "advanced" ? "Usually 30–60 seconds." : "Usually 15–30 seconds."}
           </p>
         </div>
       )}

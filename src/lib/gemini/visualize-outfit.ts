@@ -8,11 +8,12 @@ export interface VisualizeItem {
   label: string;
 }
 
-// Quality tiers — also the place to wire in the future fashion-token cost.
-// Add new tiers here; client + route both reference this list.
+// Model tiers — quicker model vs more capable model. Also the place to wire
+// in the future fashion-token cost. Add new tiers here; client + route both
+// reference this list.
 export const QUALITY_TIERS = {
   standard: { model: "gemini-2.5-flash-image", label: "Standard" },
-  high:     { model: "gemini-3-pro-image",     label: "High quality" },
+  advanced: { model: "gemini-3-pro-image",     label: "Advanced" },
 } as const;
 export type QualityTier = keyof typeof QUALITY_TIERS;
 

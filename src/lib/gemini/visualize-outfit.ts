@@ -66,9 +66,11 @@ export async function visualizeOutfit(
       "- Render each garment with its exact colour, pattern, material, and silhouette as shown in its image.",
       "- Place shoes on the feet. Place bags/jewellery as a person would naturally hold/wear them.",
       "",
-      "SCENE:",
+      "SCENE & FRAMING:",
       "- Neutral, softly-lit studio backdrop (warm off-white, light cream, or pale taupe).",
-      "- Natural standing pose, full body visible from head to feet.",
+      "- Natural standing pose.",
+      "- FULL-BODY FRAMING: the output image must show the entire person from the very top of her head (including all hair, hats, or accessories) down to BELOW her feet. Leave a small margin of empty backdrop above the head and below the feet. The head must NOT be cropped or touch the top edge. The feet must NOT be cropped or touch the bottom edge.",
+      "- Portrait orientation (taller than wide), roughly 3:4 aspect.",
       "- Photo-realistic lighting, soft shadows, fashion-editorial framing.",
       input.context ? `\nStyling context: ${input.context}` : "",
     ]

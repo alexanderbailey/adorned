@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
-import { visualizeOutfit } from "@/lib/gemini/visualize-outfit";
+import { visualizeOutfit, QUALITY_TIERS, type QualityTier } from "@/lib/gemini/visualize-outfit";
 import type { ItemCategory } from "@/lib/types";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
@@ -37,6 +37,18 @@ export async function POST(
   }
 
   const { id: outfitId } = await context.params;
+
+  let quality: QualityTier = "standard";
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    try {
+      const body = (await request.json()) as { quality?: string };
+      if (body.quality && body.quality in QUALITY_TIERS) {
+        quality = body.quality as QualityTier;
+      }
+    } catch {
+      // No body / not JSON — fall back to default.
+    }
+  }
 
   // Pull the outfit + its items, plus user's body photo.
   const [outfitRes, profileRes] = await Promise.all([
@@ -107,6 +119,7 @@ export async function POST(
       bodyPhotoUrl,
       items: visualizeItems,
       context: context_ || undefined,
+      quality,
     });
 
     const ext =

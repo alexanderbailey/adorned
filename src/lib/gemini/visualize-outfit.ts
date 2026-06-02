@@ -8,6 +8,14 @@ export interface VisualizeItem {
   label: string;
 }
 
+// Quality tiers — also the place to wire in the future fashion-token cost.
+// Add new tiers here; client + route both reference this list.
+export const QUALITY_TIERS = {
+  standard: { model: "gemini-2.5-flash-image", label: "Standard" },
+  high:     { model: "gemini-3-pro-image",     label: "High quality" },
+} as const;
+export type QualityTier = keyof typeof QUALITY_TIERS;
+
 export interface VisualizeInput {
   /** URL of the person's body reference photo. */
   bodyPhotoUrl: string;
@@ -15,6 +23,8 @@ export interface VisualizeInput {
   items: VisualizeItem[];
   /** Optional stylist notes / occasion to add context to the composition. */
   context?: string;
+  /** Which model to use; defaults to standard. */
+  quality?: QualityTier;
 }
 
 export interface VisualizeOutput {
@@ -88,8 +98,9 @@ export async function visualizeOutfit(
 
   parts.push({ text: "Generate the final composed image now." });
 
+  const tier = QUALITY_TIERS[input.quality ?? "standard"];
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-image",
+    model: tier.model,
     contents: [{ role: "user", parts }],
   });
 

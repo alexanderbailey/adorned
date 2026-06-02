@@ -12,6 +12,14 @@ interface Props {
 }
 
 type Phase = "idle" | "generating" | "done" | "error";
+type Quality = "standard" | "high";
+
+// When the token system lands, swap the `cost` strings for a real currency
+// display. Order here is the order they appear in the UI.
+const QUALITY_OPTIONS: { value: Quality; label: string; cost: string }[] = [
+  { value: "standard", label: "Standard",     cost: "Quick" },
+  { value: "high",     label: "High quality", cost: "Slower, sharper" },
+];
 
 export function LookbookSection({
   outfitId,
@@ -22,14 +30,18 @@ export function LookbookSection({
   const [lookbookUrl, setLookbookUrl] = useState<string | null>(initialLookbookUrl);
   const [phase, setPhase] = useState<Phase>(initialLookbookUrl ? "done" : "idle");
   const [error, setError] = useState<string | null>(null);
+  const [activeQuality, setActiveQuality] = useState<Quality | null>(null);
 
-  async function generate() {
+  async function generate(quality: Quality) {
     if (!hasBodyPhoto) return;
     setPhase("generating");
+    setActiveQuality(quality);
     setError(null);
     try {
       const res = await fetch(`/api/outfits/${outfitId}/visualize`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quality }),
       });
       if (!res.ok) {
         const body = await res.text();
@@ -72,42 +84,28 @@ export function LookbookSection({
     );
   }
 
+  const showButtons = phase === "idle" || phase === "done" || phase === "error";
+
   return (
     <section className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
-          See it on you
-        </p>
-        {phase === "done" && lookbookUrl && (
-          <button
-            onClick={generate}
-            disabled={phase !== "done" && (phase as Phase) !== "error"}
-            className="text-[12px] text-charcoal underline underline-offset-2"
-          >
-            Regenerate
-          </button>
-        )}
-      </div>
-
-      {phase === "idle" && (
-        <button
-          onClick={generate}
-          className="w-full h-12 bg-charcoal text-surface text-[15px] font-medium rounded-[6px] flex items-center justify-center gap-2"
-        >
-          <Icon name="auto_awesome" size={18} />
-          Visualise on me
-        </button>
-      )}
+      <p className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
+        See it on you
+      </p>
 
       {phase === "generating" && (
         <div className="w-full aspect-[3/4] bg-surface-alt rounded-lg border border-hairline flex flex-col items-center justify-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-hairline border-t-accent animate-spin" />
-          <p className="text-[13px] text-mid">Styling your lookbook…</p>
-          <p className="text-[11px] text-mid">Usually 15–30 seconds.</p>
+          <p className="text-[13px] text-mid">
+            Styling your lookbook
+            {activeQuality === "high" ? " (high quality)" : ""}…
+          </p>
+          <p className="text-[11px] text-mid">
+            {activeQuality === "high" ? "Usually 30–60 seconds." : "Usually 15–30 seconds."}
+          </p>
         </div>
       )}
 
-      {phase === "done" && lookbookUrl && (
+      {(phase === "done" || phase === "error") && lookbookUrl && (
         <div className="w-full aspect-[3/4] bg-surface-alt rounded-lg overflow-hidden border border-hairline">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -118,15 +116,27 @@ export function LookbookSection({
         </div>
       )}
 
-      {phase === "error" && (
-        <div className="space-y-2">
-          {error && <p className="text-[13px] text-danger">{error}</p>}
-          <button
-            onClick={generate}
-            className="w-full h-12 border border-border-strong text-charcoal text-[15px] font-medium rounded-[6px]"
-          >
-            Try again
-          </button>
+      {phase === "error" && error && (
+        <p className="text-[13px] text-danger">{error}</p>
+      )}
+
+      {showButtons && (
+        <div className="grid grid-cols-2 gap-2">
+          {QUALITY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => generate(opt.value)}
+              className="h-14 px-3 border border-border-strong text-charcoal rounded-[6px] flex flex-col items-center justify-center gap-0.5 transition-colors active:bg-surface-alt"
+            >
+              <span className="flex items-center gap-1.5 text-[13px] font-medium">
+                <Icon name="auto_awesome" size={14} />
+                {opt.label}
+              </span>
+              <span className="text-[10px] text-mid tracking-[0.4px] uppercase">
+                {opt.cost}
+              </span>
+            </button>
+          ))}
         </div>
       )}
     </section>

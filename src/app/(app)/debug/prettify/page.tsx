@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { Icon } from "@/components/Icon";
 import { normalizeImage } from "@/lib/normalize-image";
+import { useToast } from "@/components/Toast";
 
 // The current production prompt — preloaded into the textarea so you can
 // fork it and iterate. Edit freely; persisted to localStorage on every change.
@@ -47,6 +48,7 @@ interface Result {
 type Model = "standard" | "advanced";
 
 export default function DebugPrettifyPage() {
+  const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
@@ -131,6 +133,18 @@ export default function DebugPrettifyPage() {
     setPrompt(DEFAULT_PROMPT);
   }
 
+  function savePrompt() {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ prompt, temperature })
+      );
+      toast.show("Prompt saved", "success");
+    } catch {
+      toast.show("Could not save prompt", "error");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
       <div className="flex items-center justify-between px-4 pt-[54px] h-[88px] border-b border-hairline">
@@ -204,12 +218,20 @@ export default function DebugPrettifyPage() {
             <p className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
               Prompt
             </p>
-            <button
-              onClick={resetPrompt}
-              className="text-[12px] text-mid underline underline-offset-2"
-            >
-              Reset to default
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={savePrompt}
+                className="text-[12px] text-charcoal underline underline-offset-2 font-medium"
+              >
+                Update
+              </button>
+              <button
+                onClick={resetPrompt}
+                className="text-[12px] text-mid underline underline-offset-2"
+              >
+                Reset to default
+              </button>
+            </div>
           </div>
           <textarea
             value={prompt}

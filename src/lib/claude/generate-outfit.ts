@@ -95,19 +95,28 @@ function formatRequest(prompt: string, chips: PromptChips | undefined): string {
   return parts.join("\n");
 }
 
+export interface GenerateOutfitsResult {
+  outfits: GeneratedOutfit[];
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}
+
 export async function generateOutfits(input: {
   prompt: string;
   chips?: PromptChips;
   profile: ProfileForGen;
   wardrobe: WardrobeItemForGen[];
-}): Promise<GeneratedOutfit[]> {
+}): Promise<GenerateOutfitsResult> {
   const profileBlock = formatProfile(input.profile);
   const wardrobeBlock = formatWardrobe(input.wardrobe);
   const requestBlock = formatRequest(input.prompt, input.chips);
 
   // Cache the stable parts (profile + wardrobe) so regenerations are cheap.
+  const model = "claude-sonnet-4-6";
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model,
     max_tokens: 2000,
     system: SYSTEM_PROMPT,
     messages: [
@@ -147,8 +156,15 @@ export async function generateOutfits(input: {
   }
 
   const allowed = new Set(input.wardrobe.map((i) => i.item_id));
-  return parsed.outfits.map((o) => ({
+  const outfits = parsed.outfits.map((o) => ({
     item_ids: (o.item_ids ?? []).filter((id) => allowed.has(id)),
     reasoning: o.reasoning ?? "",
   }));
+  return {
+    outfits,
+    model,
+    inputTokens: message.usage?.input_tokens ?? 0,
+    outputTokens: message.usage?.output_tokens ?? 0,
+    cachedInputTokens: message.usage?.cache_read_input_tokens ?? 0,
+  };
 }

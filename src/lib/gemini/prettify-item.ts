@@ -5,6 +5,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 export interface PrettifyOutput {
   imageBytes: Buffer;
   mimeType: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 const PROMPT = [
@@ -36,8 +39,9 @@ export async function prettifyItem(input: {
   imageBase64: string;
   mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 }): Promise<PrettifyOutput> {
+  const model = "gemini-2.5-flash-image";
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-image",
+    model,
     contents: [
       {
         role: "user",
@@ -51,12 +55,16 @@ export async function prettifyItem(input: {
     ],
   });
 
+  const usage = response.usageMetadata;
   const parts = response.candidates?.[0]?.content?.parts ?? [];
   for (const part of parts) {
     if (part.inlineData?.data) {
       return {
         imageBytes: Buffer.from(part.inlineData.data, "base64"),
         mimeType: part.inlineData.mimeType ?? "image/png",
+        model,
+        inputTokens: usage?.promptTokenCount ?? 0,
+        outputTokens: usage?.candidatesTokenCount ?? 0,
       };
     }
   }

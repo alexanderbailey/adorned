@@ -6,6 +6,7 @@ import {
   type ProfileForGen,
 } from "@/lib/claude/generate-outfit";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
+import { logAiUsage } from "@/lib/usage";
 import type { PaletteSwatch, PromptChips } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -76,17 +77,42 @@ export async function POST(request: Request) {
     );
   }
 
+  const started = Date.now();
   try {
-    const outfits = await generateOutfits({
+    const result = await generateOutfits({
       prompt: prompt ?? "",
       chips,
       profile,
       wardrobe,
     });
-    return NextResponse.json({ outfits });
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: result.model,
+      operation: "generate_outfit",
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cachedInputTokens: result.cachedInputTokens,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: {
+        wardrobe_size: wardrobe.length,
+        outfit_count: result.outfits.length,
+      },
+    });
+    return NextResponse.json({ outfits: result.outfits });
   } catch (err) {
     console.error("[generate-outfits] failed:", err);
     const message = err instanceof Error ? err.message : "Generation failed";
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      operation: "generate_outfit",
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: message,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

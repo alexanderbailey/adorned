@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@/lib/supabase/server";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
+import { logAiUsage } from "@/lib/usage";
 
 export const maxDuration = 60;
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
       ...(Object.keys(config).length > 0 ? { config } : {}),
     });
 
+    const usage = response.usageMetadata;
     const parts = response.candidates?.[0]?.content?.parts ?? [];
     let outImage: { mimeType: string; data: string } | null = null;
     let outText = "";
@@ -82,22 +84,61 @@ export async function POST(request: Request) {
       }
     }
     if (!outImage) {
+      await logAiUsage({
+        userId: user.id,
+        provider: "google",
+        model: modelId,
+        operation: "debug_prettify",
+        inputTokens: usage?.promptTokenCount ?? 0,
+        outputTokens: usage?.candidatesTokenCount ?? 0,
+        inputBytes: bytes.byteLength,
+        durationMs: Date.now() - started,
+        status: "error",
+        errorMessage: "Model returned no image",
+        metadata: { prompt_length: prompt.length, model_text: outText.slice(0, 500) },
+      });
       return NextResponse.json(
         { error: "Model returned no image", text: outText, elapsedMs: Date.now() - started },
         { status: 500 }
       );
     }
 
+    const outBytes = Math.round((outImage.data.length * 3) / 4);
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model: modelId,
+      operation: "debug_prettify",
+      inputTokens: usage?.promptTokenCount ?? 0,
+      outputTokens: usage?.candidatesTokenCount ?? 0,
+      inputBytes: bytes.byteLength,
+      outputBytes: outBytes,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: { prompt_length: prompt.length },
+    });
+
     return NextResponse.json({
       image: `data:${outImage.mimeType};base64,${outImage.data}`,
       mimeType: outImage.mimeType,
-      bytes: Math.round((outImage.data.length * 3) / 4),
+      bytes: outBytes,
       text: outText || null,
       model: modelId,
       elapsedMs: Date.now() - started,
     });
   } catch (err) {
     console.error("[debug/prettify] failed:", err);
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model: modelId,
+      operation: "debug_prettify",
+      inputBytes: bytes.byteLength,
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: err instanceof Error ? err.message : "Failed",
+      metadata: { prompt_length: prompt.length },
+    });
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Failed",

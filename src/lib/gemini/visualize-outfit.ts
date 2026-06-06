@@ -31,6 +31,9 @@ export interface VisualizeInput {
 export interface VisualizeOutput {
   imageBytes: Buffer;
   mimeType: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 async function fetchAsInlineData(url: string): Promise<{
@@ -105,12 +108,16 @@ export async function visualizeOutfit(
     contents: [{ role: "user", parts }],
   });
 
+  const usage = response.usageMetadata;
   const outParts = response.candidates?.[0]?.content?.parts ?? [];
   for (const part of outParts) {
     if (part.inlineData?.data) {
       return {
         imageBytes: Buffer.from(part.inlineData.data, "base64"),
         mimeType: part.inlineData.mimeType ?? "image/png",
+        model: tier.model,
+        inputTokens: usage?.promptTokenCount ?? 0,
+        outputTokens: usage?.candidatesTokenCount ?? 0,
       };
     }
   }

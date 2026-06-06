@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { prettifyItem } from "@/lib/gemini/prettify-item";
+import { logAiUsage } from "@/lib/usage";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
 export const maxDuration = 60;
@@ -40,6 +41,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const started = Date.now();
+  let srcByteLength = 0;
   try {
     // Fetch the source image, base64 it for Gemini.
     const srcRes = await fetch(source_image_url);
@@ -54,8 +57,9 @@ export async function POST(request: Request) {
       ? srcCT
       : "image/jpeg") as "image/jpeg" | "image/png" | "image/webp" | "image/gif";
     const srcBytes = Buffer.from(await srcRes.arrayBuffer());
+    srcByteLength = srcBytes.byteLength;
 
-    const { imageBytes, mimeType } = await prettifyItem({
+    const { imageBytes, mimeType, model, inputTokens, outputTokens } = await prettifyItem({
       imageBase64: srcBytes.toString("base64"),
       mediaType,
     });
@@ -78,10 +82,34 @@ export async function POST(request: Request) {
     if (uploadErr) throw uploadErr;
 
     const url = `${admin.storage.from("items").getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model,
+      operation: "prettify_item",
+      inputTokens,
+      outputTokens,
+      inputBytes: srcByteLength,
+      outputBytes: imageBytes.byteLength,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: { item_id },
+    });
     return NextResponse.json({ cutout_url: url });
   } catch (err) {
     console.error("[items/prettify] failed:", err);
     const message = err instanceof Error ? err.message : "Prettify failed";
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model: "gemini-2.5-flash-image",
+      operation: "prettify_item",
+      inputBytes: srcByteLength,
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: message,
+      metadata: { item_id },
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

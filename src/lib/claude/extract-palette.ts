@@ -20,12 +20,21 @@ Return ONLY a JSON object with this exact shape (no markdown fences, no commenta
   ]
 }`;
 
+export interface ExtractPaletteResult {
+  swatches: PaletteSwatch[];
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}
+
 export async function extractPalette(
   imageBase64: string,
   mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"
-): Promise<PaletteSwatch[]> {
+): Promise<ExtractPaletteResult> {
+  const model = "claude-sonnet-4-6";
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model,
     max_tokens: 2000,
     system: SYSTEM_PROMPT,
     messages: [
@@ -64,11 +73,18 @@ export async function extractPalette(
   }
 
   // Light sanity filter — keep only entries with valid hex + non-empty name.
-  return parsed.swatches.filter(
+  const swatches = parsed.swatches.filter(
     (s) =>
       typeof s?.name === "string" &&
       s.name.trim().length > 0 &&
       typeof s?.hex === "string" &&
       /^#[0-9a-fA-F]{6}$/.test(s.hex)
   );
+  return {
+    swatches,
+    model,
+    inputTokens: message.usage?.input_tokens ?? 0,
+    outputTokens: message.usage?.output_tokens ?? 0,
+    cachedInputTokens: message.usage?.cache_read_input_tokens ?? 0,
+  };
 }

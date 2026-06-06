@@ -95,6 +95,12 @@ export default async function ProfilePage() {
           >
             Prettify playground (debug)
           </Link>
+          <Link
+            href="/debug/usage"
+            className="block text-[12px] text-mid underline underline-offset-2"
+          >
+            AI usage (debug)
+          </Link>
           <form
             action={async () => {
               "use server";

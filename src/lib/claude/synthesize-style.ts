@@ -16,10 +16,18 @@ Synthesise these into a 2-3 paragraph canonical style summary written in the sec
 
 Return ONLY the prose summary. No headers, no bullet points, no preamble.`;
 
+export interface SynthesizeStyleResult {
+  summary: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}
+
 export async function synthesizeStyle(
   description: string,
   inspoImageUrls: string[]
-): Promise<string> {
+): Promise<SynthesizeStyleResult> {
   const content: Anthropic.Messages.ContentBlockParam[] = [
     {
       type: "text",
@@ -34,16 +42,24 @@ export async function synthesizeStyle(
     })),
   ];
 
+  const model = "claude-sonnet-4-6";
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model,
     max_tokens: 1500,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content }],
   });
 
-  return message.content
+  const summary = message.content
     .filter((b) => b.type === "text")
     .map((b) => (b as { type: "text"; text: string }).text)
     .join("")
     .trim();
+  return {
+    summary,
+    model,
+    inputTokens: message.usage?.input_tokens ?? 0,
+    outputTokens: message.usage?.output_tokens ?? 0,
+    cachedInputTokens: message.usage?.cache_read_input_tokens ?? 0,
+  };
 }

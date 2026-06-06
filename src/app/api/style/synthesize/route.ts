@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { synthesizeStyle } from "@/lib/claude/synthesize-style";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
+import { logAiUsage } from "@/lib/usage";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -31,12 +32,34 @@ export async function POST(request: Request) {
     );
   }
 
+  const started = Date.now();
   try {
-    const summary = await synthesizeStyle(description ?? "", inspo_image_urls ?? []);
-    return NextResponse.json({ summary });
+    const result = await synthesizeStyle(description ?? "", inspo_image_urls ?? []);
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: result.model,
+      operation: "synthesize_style",
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cachedInputTokens: result.cachedInputTokens,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: { inspo_count: (inspo_image_urls ?? []).length },
+    });
+    return NextResponse.json({ summary: result.summary });
   } catch (err) {
     console.error("[synthesize] failed:", err);
     const message = err instanceof Error ? err.message : "Synthesis failed";
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      operation: "synthesize_style",
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: message,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

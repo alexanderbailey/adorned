@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { visualizeOutfit, QUALITY_TIERS, type QualityTier } from "@/lib/gemini/visualize-outfit";
+import { logAiUsage } from "@/lib/usage";
 import type { ItemCategory } from "@/lib/types";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
@@ -114,8 +115,9 @@ export async function POST(
     .filter(Boolean)
     .join("\n");
 
+  const started = Date.now();
   try {
-    const { imageBytes, mimeType } = await visualizeOutfit({
+    const { imageBytes, mimeType, model, inputTokens, outputTokens } = await visualizeOutfit({
       bodyPhotoUrl,
       items: visualizeItems,
       context: context_ || undefined,
@@ -147,10 +149,32 @@ export async function POST(
       .eq("id", outfitId);
     if (updateErr) throw updateErr;
 
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model,
+      operation: "visualize_outfit",
+      inputTokens,
+      outputTokens,
+      outputBytes: imageBytes.byteLength,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: { outfit_id: outfitId, quality, item_count: visualizeItems.length },
+    });
     return NextResponse.json({ lookbook_url: url });
   } catch (err) {
     console.error("[visualize] failed:", err);
     const message = err instanceof Error ? err.message : "Visualization failed";
+    await logAiUsage({
+      userId: user.id,
+      provider: "google",
+      model: QUALITY_TIERS[quality].model,
+      operation: "visualize_outfit",
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: message,
+      metadata: { outfit_id: outfitId, quality, item_count: visualizeItems.length },
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

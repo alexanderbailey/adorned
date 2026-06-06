@@ -36,9 +36,18 @@ Given an image of a clothing item (cutout on a plain background), return a JSON 
 
 Respond with ONLY the JSON object. No markdown fences, no extra text.`;
 
-export async function tagItem(imageUrl: string): Promise<ItemTags> {
+export interface TagItemResult {
+  tags: ItemTags;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}
+
+export async function tagItem(imageUrl: string): Promise<TagItemResult> {
+  const model = "claude-haiku-4-5";
   const message = await client.messages.create({
-    model: "claude-haiku-4-5",
+    model,
     max_tokens: 1024,
     system: SYSTEM_PROMPT,
     messages: [
@@ -64,11 +73,18 @@ export async function tagItem(imageUrl: string): Promise<ItemTags> {
     .join("")
     .trim();
 
+  let tags: ItemTags;
   try {
-    return JSON.parse(text) as ItemTags;
+    tags = JSON.parse(text) as ItemTags;
   } catch {
-    // Strip markdown code fences if the model wrapped its JSON despite instructions.
     const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
-    return JSON.parse(cleaned) as ItemTags;
+    tags = JSON.parse(cleaned) as ItemTags;
   }
+  return {
+    tags,
+    model,
+    inputTokens: message.usage?.input_tokens ?? 0,
+    outputTokens: message.usage?.output_tokens ?? 0,
+    cachedInputTokens: message.usage?.cache_read_input_tokens ?? 0,
+  };
 }

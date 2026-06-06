@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractPalette } from "@/lib/claude/extract-palette";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
+import { logAiUsage } from "@/lib/usage";
 
 const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
@@ -30,12 +31,36 @@ export async function POST(request: Request) {
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString("base64");
 
+  const started = Date.now();
   try {
-    const swatches = await extractPalette(base64, mediaType);
-    return NextResponse.json({ swatches });
+    const result = await extractPalette(base64, mediaType);
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: result.model,
+      operation: "extract_palette",
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      cachedInputTokens: result.cachedInputTokens,
+      inputBytes: bytes.byteLength,
+      durationMs: Date.now() - started,
+      status: "success",
+      metadata: { swatch_count: result.swatches.length },
+    });
+    return NextResponse.json({ swatches: result.swatches });
   } catch (err) {
     console.error("[palette/extract] failed:", err);
     const message = err instanceof Error ? err.message : "Extraction failed";
+    await logAiUsage({
+      userId: user.id,
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      operation: "extract_palette",
+      inputBytes: bytes.byteLength,
+      durationMs: Date.now() - started,
+      status: "error",
+      errorMessage: message,
+    });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

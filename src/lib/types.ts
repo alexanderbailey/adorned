@@ -150,6 +150,33 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["outfit_items"]["Row"]>;
         Relationships: [];
       };
+      ai_usage: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          created_at: string;
+          provider: string;
+          model: string;
+          operation: string;
+          input_tokens: number | null;
+          output_tokens: number | null;
+          cached_input_tokens: number | null;
+          input_bytes: number | null;
+          output_bytes: number | null;
+          cost_usd: number | null;
+          duration_ms: number | null;
+          status: "success" | "error";
+          error_message: string | null;
+          metadata: Record<string, unknown>;
+        };
+        Insert: InsertOf<
+          Database["public"]["Tables"]["ai_usage"]["Row"],
+          "id" | "created_at",
+          "metadata"
+        >;
+        Update: Partial<Database["public"]["Tables"]["ai_usage"]["Insert"]>;
+        Relationships: [];
+      };
       wear_log: {
         Row: {
           id: string;

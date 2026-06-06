@@ -53,6 +53,7 @@ export default function DebugPrettifyPage() {
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [instructions, setInstructions] = useState("");
   const [temperature, setTemperature] = useState(1);
   const [busy, setBusy] = useState<Model | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -88,6 +89,7 @@ export default function DebugPrettifyPage() {
   async function handlePick(file: File) {
     setError(null);
     setResult(null);
+    setInstructions(""); // Per-image — clear when source changes.
     try {
       const { file: normalized } = await normalizeImage(file);
       if (sourcePreview) URL.revokeObjectURL(sourcePreview);
@@ -107,9 +109,12 @@ export default function DebugPrettifyPage() {
     setError(null);
     setResult(null);
     try {
+      const composedPrompt = instructions.trim()
+        ? `${prompt}\n\nSPECIFIC INSTRUCTIONS FOR THIS IMAGE:\n${instructions.trim()}`
+        : prompt;
       const form = new FormData();
       form.append("file", sourceFile);
-      form.append("prompt", prompt);
+      form.append("prompt", composedPrompt);
       form.append("model", model);
       form.append("temperature", String(temperature));
       const res = await fetch("/api/debug/prettify", {
@@ -211,6 +216,25 @@ export default function DebugPrettifyPage() {
             }}
           />
         </section>
+
+        {/* Per-image instructions — appended to the main prompt at send time */}
+        {sourcePreview && (
+          <section className="space-y-2">
+            <p className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
+              This image (optional)
+            </p>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              rows={3}
+              placeholder="e.g. This is a skirt, not shorts. Or: ignore the hanger in the background. Or: the colour is true navy, not black."
+              className="w-full p-3 text-[13px] leading-[1.5] text-charcoal bg-surface border border-hairline rounded-lg outline-none focus:border-charcoal resize-y"
+            />
+            <p className="text-[11px] text-mid">
+              Appended to the main prompt under &lsquo;SPECIFIC INSTRUCTIONS FOR THIS IMAGE&rsquo;. Cleared when you replace the photo.
+            </p>
+          </section>
+        )}
 
         {/* Prompt */}
         <section className="space-y-2">

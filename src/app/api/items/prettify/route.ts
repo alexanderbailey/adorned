@@ -23,9 +23,10 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { source_image_url, item_id } = body as {
+  const { source_image_url, item_id, instructions } = body as {
     source_image_url?: string;
     item_id?: string;
+    instructions?: string;
   };
 
   if (!source_image_url) {
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     const { imageBytes, mimeType, model, inputTokens, outputTokens } = await prettifyItem({
       imageBase64: srcBytes.toString("base64"),
       mediaType,
+      instructions: typeof instructions === "string" ? instructions : undefined,
     });
 
     const ext =
@@ -93,7 +95,10 @@ export async function POST(request: Request) {
       outputBytes: imageBytes.byteLength,
       durationMs: Date.now() - started,
       status: "success",
-      metadata: { item_id },
+      metadata: {
+        item_id,
+        has_instructions: typeof instructions === "string" && instructions.trim().length > 0,
+      },
     });
     return NextResponse.json({ cutout_url: url });
   } catch (err) {
@@ -102,7 +107,7 @@ export async function POST(request: Request) {
     await logAiUsage({
       userId: user.id,
       provider: "google",
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3-pro-image",
       operation: "prettify_item",
       inputBytes: srcByteLength,
       durationMs: Date.now() - started,

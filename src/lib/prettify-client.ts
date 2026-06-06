@@ -6,7 +6,8 @@ import { extractErrorMessage } from "@/lib/error";
 
 export async function prettifyViaApi(
   itemId: string,
-  sourceImageUrl: string
+  sourceImageUrl: string,
+  instructions?: string
 ): Promise<string> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -14,7 +15,11 @@ export async function prettifyViaApi(
       const res = await fetch("/api/items/prettify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source_image_url: sourceImageUrl, item_id: itemId }),
+        body: JSON.stringify({
+          source_image_url: sourceImageUrl,
+          item_id: itemId,
+          instructions,
+        }),
       });
       if (res.ok) {
         const { cutout_url } = (await res.json()) as { cutout_url: string };

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { DeleteItemButton } from "./DeleteItemButton";
+import { RegenerateCutout } from "./RegenerateCutout";
 import { Icon } from "@/components/Icon";
 
 interface PageProps {
@@ -72,6 +73,12 @@ export default async function ItemDetailPage({ params }: PageProps) {
               sizes="220px"
             />
           </div>
+          {item.original_image_url && (
+            <RegenerateCutout
+              itemId={id}
+              originalImageUrl={item.original_image_url}
+            />
+          )}
         </div>
 
         {/* Title block */}

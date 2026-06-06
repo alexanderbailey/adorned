@@ -9,7 +9,21 @@ import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
 import { Icon } from "@/components/Icon";
 import { extractErrorMessage } from "@/lib/error";
+import { clsx } from "clsx";
 import type { ItemTags } from "@/lib/claude/tag-item";
+import type { ItemCategory, ItemFormality, ItemSeason } from "@/lib/types";
+
+const CATEGORIES: ItemCategory[] = [
+  "tops", "bottoms", "skirts", "dresses", "outerwear",
+  "shoes", "bags", "accessories", "jewellery",
+];
+const SEASONS: { value: ItemSeason; label: string }[] = [
+  { value: "spring", label: "Spring" },
+  { value: "summer", label: "Summer" },
+  { value: "fall",   label: "Autumn" },
+  { value: "winter", label: "Winter" },
+];
+const FORMALITIES: ItemFormality[] = ["casual", "smart-casual", "formal"];
 
 const CONCURRENCY = 3;
 
@@ -359,10 +373,24 @@ function ReviewStack({
 }) {
   const [index, setIndex] = useState(0);
   const [keepIds, setKeepIds] = useState<Set<string>>(new Set());
+  // Per-item tag edits — keyed by QueueItem.id. Fall back to AI tags on save.
+  const [editedTags, setEditedTags] = useState<Record<string, ItemTags>>({});
   const [error, setError] = useState<string | null>(null);
 
   const current = items[index];
   const isLast = index >= items.length - 1;
+
+  function tagsFor(it: QueueItem): ItemTags {
+    return editedTags[it.id] ?? it.payload!.tags;
+  }
+
+  function updateCurrentTags(patch: Partial<ItemTags>) {
+    if (!current) return;
+    setEditedTags((prev) => ({
+      ...prev,
+      [current.id]: { ...tagsFor(current), ...patch },
+    }));
+  }
 
   async function commitAndFinish(nextKeepIds: Set<string>) {
     onSavingChange(true);
@@ -378,23 +406,24 @@ function ReviewStack({
         .filter((it) => nextKeepIds.has(it.id) && it.payload)
         .map((it) => {
           const p = it.payload!;
+          const t = tagsFor(it);
           return {
             id: p.itemId,
             user_id: user.id,
             original_image_url: p.originalImageUrl,
             cutout_image_url: p.cutoutImageUrl,
             thumb_image_url: p.thumbImageUrl,
-            category: p.tags.category,
-            subcategory: p.tags.subcategory,
-            primary_color_hex: p.tags.primary_color_hex,
-            primary_color_name: p.tags.primary_color_name,
-            secondary_colors: p.tags.secondary_colors,
-            material: p.tags.material,
-            pattern: p.tags.pattern,
-            season: p.tags.season,
-            formality: p.tags.formality,
-            palette_fit_tags: p.tags.palette_fit_tags,
-            ai_description: p.tags.ai_description,
+            category: t.category,
+            subcategory: t.subcategory,
+            primary_color_hex: t.primary_color_hex,
+            primary_color_name: t.primary_color_name,
+            secondary_colors: t.secondary_colors,
+            material: t.material,
+            pattern: t.pattern,
+            season: t.season,
+            formality: t.formality,
+            palette_fit_tags: t.palette_fit_tags,
+            ai_description: t.ai_description,
             archived: false,
           };
         });
@@ -433,8 +462,8 @@ function ReviewStack({
     );
   }
 
-  const tags = current.payload.tags;
-  const keepCount = keepIds.size + (isLast ? 0 : 0); // running keep count for footer
+  const tags = tagsFor(current);
+  const keepCount = keepIds.size;
 
   return (
     <>
@@ -442,46 +471,129 @@ function ReviewStack({
         <span className="text-[12px] text-mid font-mono tabular-nums">
           {index + 1} / {items.length}
         </span>
-        <span className="text-[12px] text-mid">
-          {keepCount} keeping
-        </span>
+        <span className="text-[12px] text-mid">{keepCount} keeping</span>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         <div
           className="relative w-full bg-[#F0EDE3] flex items-center justify-center border-b border-hairline"
-          style={{ height: 320 }}
+          style={{ height: 220 }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={current.payload.cutoutImageUrl}
             alt=""
-            className="max-w-[200px] max-h-[280px] object-contain"
+            className="max-w-[160px] max-h-[200px] object-contain"
           />
         </div>
 
-        <div className="px-5 py-4 space-y-2.5">
-          <div className="flex items-center gap-2.5">
-            <span
-              className="w-[18px] h-[18px] rounded-full shrink-0"
-              style={{
-                background: tags.primary_color_hex,
-                boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
-              }}
+        <div className="px-5 py-4 flex flex-col gap-3">
+          <ReviewField label="Category">
+            <select
+              value={tags.category}
+              onChange={(e) => updateCurrentTags({ category: e.target.value as ItemCategory })}
+              className="w-full bg-transparent text-[14px] text-charcoal capitalize outline-none"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c.charAt(0).toUpperCase() + c.slice(1)}
+                </option>
+              ))}
+            </select>
+          </ReviewField>
+
+          <ReviewField label="Subcategory">
+            <input
+              value={tags.subcategory}
+              onChange={(e) => updateCurrentTags({ subcategory: e.target.value })}
+              className="w-full bg-transparent text-[14px] text-charcoal outline-none"
+              placeholder="e.g. blouse"
             />
-            <p className="text-[15px] font-medium text-charcoal capitalize">
-              {tags.subcategory || tags.category}
-            </p>
+          </ReviewField>
+
+          <ReviewField label="Colour">
+            <div className="flex items-center gap-2.5">
+              <span
+                className="w-[20px] h-[20px] rounded-full shrink-0"
+                style={{
+                  background: tags.primary_color_hex,
+                  boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.06)",
+                }}
+              />
+              <input
+                value={tags.primary_color_name}
+                onChange={(e) => updateCurrentTags({ primary_color_name: e.target.value })}
+                className="flex-1 bg-transparent text-[14px] text-charcoal outline-none"
+              />
+            </div>
+          </ReviewField>
+
+          <ReviewField label="Material">
+            <input
+              value={tags.material}
+              onChange={(e) => updateCurrentTags({ material: e.target.value })}
+              className="w-full bg-transparent text-[14px] text-charcoal outline-none"
+            />
+          </ReviewField>
+
+          <ReviewField label="Seasons">
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              {SEASONS.map((s) => {
+                const active = tags.season?.includes(s.value) ?? false;
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => {
+                      const set = new Set(tags.season ?? []);
+                      if (set.has(s.value)) set.delete(s.value);
+                      else set.add(s.value);
+                      updateCurrentTags({ season: Array.from(set) });
+                    }}
+                    className={clsx(
+                      "inline-flex items-center h-8 px-3 rounded-full border text-[13px] leading-none transition-colors",
+                      active
+                        ? "bg-charcoal text-surface border-charcoal font-medium"
+                        : "bg-transparent text-charcoal border-border-strong"
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </ReviewField>
+
+          <ReviewField label="Formality">
+            <select
+              value={tags.formality}
+              onChange={(e) => updateCurrentTags({ formality: e.target.value as ItemFormality })}
+              className="w-full bg-transparent text-[14px] text-charcoal outline-none"
+            >
+              {FORMALITIES.map((f) => (
+                <option key={f} value={f}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </option>
+              ))}
+            </select>
+          </ReviewField>
+
+          <div className="p-3.5 bg-surface-alt border border-hairline rounded-lg">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon name="auto_awesome" size={12} className="text-accent" />
+              <span className="text-[10px] font-semibold tracking-[1.2px] uppercase text-mid">
+                Description
+              </span>
+            </div>
+            <textarea
+              value={tags.ai_description}
+              onChange={(e) => updateCurrentTags({ ai_description: e.target.value })}
+              rows={3}
+              className="w-full bg-transparent text-[13px] leading-[1.55] text-charcoal outline-none resize-none"
+            />
           </div>
-          <p className="text-[12px] text-mid uppercase tracking-[1.2px]">
-            {tags.category} · {tags.primary_color_name} · {tags.formality}
-          </p>
-          {tags.ai_description && (
-            <p className="text-[13px] leading-[1.55] text-charcoal pt-2">
-              {tags.ai_description}
-            </p>
-          )}
-          {error && <p className="text-[13px] text-danger pt-2">{error}</p>}
+
+          {error && <p className="text-[13px] text-danger pt-1">{error}</p>}
         </div>
       </div>
 
@@ -500,5 +612,22 @@ function ReviewStack({
         </button>
       </div>
     </>
+  );
+}
+
+function ReviewField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="p-3.5 bg-surface border border-hairline rounded-lg">
+      <span className="block text-[10px] font-semibold tracking-[1.2px] uppercase text-mid mb-1.5">
+        {label}
+      </span>
+      {children}
+    </div>
   );
 }

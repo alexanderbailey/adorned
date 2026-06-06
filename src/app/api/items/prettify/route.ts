@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { prettifyItem } from "@/lib/gemini/prettify-item";
+import { keyWhiteBackground } from "@/lib/chroma-key";
 import { logAiUsage } from "@/lib/usage";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
@@ -60,25 +61,24 @@ export async function POST(request: Request) {
     const srcBytes = Buffer.from(await srcRes.arrayBuffer());
     srcByteLength = srcBytes.byteLength;
 
-    const { imageBytes, mimeType, model, inputTokens, outputTokens } = await prettifyItem({
+    const { imageBytes, model, inputTokens, outputTokens } = await prettifyItem({
       imageBase64: srcBytes.toString("base64"),
       mediaType,
       instructions: typeof instructions === "string" ? instructions : undefined,
     });
 
-    const ext =
-      mimeType === "image/png"
-        ? "png"
-        : mimeType === "image/webp"
-          ? "webp"
-          : "jpg";
-    const path = `${user.id}/${item_id}/cutout.${ext}`;
+    // Gemini bakes the "white background" into the pixels rather than emitting
+    // a real alpha layer. Flood-fill the white from the corners into actual
+    // transparency before we store this as the item's cutout.
+    const keyedPng = await keyWhiteBackground(imageBytes);
+
+    const path = `${user.id}/${item_id}/cutout.png`;
 
     const admin = createAdminClient();
     const { error: uploadErr } = await admin.storage
       .from("items")
-      .upload(path, imageBytes, {
-        contentType: mimeType,
+      .upload(path, keyedPng, {
+        contentType: "image/png",
         upsert: true,
       });
     if (uploadErr) throw uploadErr;
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       inputTokens,
       outputTokens,
       inputBytes: srcByteLength,
-      outputBytes: imageBytes.byteLength,
+      outputBytes: keyedPng.byteLength,
       durationMs: Date.now() - started,
       status: "success",
       metadata: {

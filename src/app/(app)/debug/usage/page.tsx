@@ -45,12 +45,20 @@ export default async function DebugUsagePage() {
 
   // Use admin client so we see usage across all users (the developer's view).
   const admin = createAdminClient();
-  const { data: rowsRaw } = await admin
-    .from("ai_usage")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(LIMIT);
+  const [{ data: rowsRaw }, { data: usersList }] = await Promise.all([
+    admin
+      .from("ai_usage")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(LIMIT),
+    // Build a uid -> email map so the table shows who actually called.
+    admin.auth.admin.listUsers({ perPage: 200 }),
+  ]);
   const rows = (rowsRaw ?? []) as UsageRow[];
+  const emailById = new Map<string, string>();
+  for (const u of usersList?.users ?? []) {
+    if (u.id && u.email) emailById.set(u.id, u.email);
+  }
 
   // Aggregates over the loaded window.
   const totalCost = rows.reduce((s, r) => s + (r.cost_usd ?? 0), 0);
@@ -126,7 +134,11 @@ export default async function DebugUsagePage() {
           ) : (
             <div className="space-y-2">
               {rows.map((r) => (
-                <UsageCard key={r.id} row={r} />
+                <UsageCard
+                  key={r.id}
+                  row={r}
+                  email={r.user_id ? emailById.get(r.user_id) : undefined}
+                />
               ))}
             </div>
           )}
@@ -149,7 +161,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function UsageCard({ row }: { row: UsageRow }) {
+function UsageCard({ row, email }: { row: UsageRow; email?: string }) {
   const when = new Date(row.created_at);
   const meta = row.metadata && Object.keys(row.metadata).length > 0
     ? JSON.stringify(row.metadata)
@@ -161,7 +173,8 @@ function UsageCard({ row }: { row: UsageRow }) {
           {row.operation}
         </span>
         <span className="text-[11px] text-mid font-mono tabular-nums whitespace-nowrap">
-          {when.toLocaleString(undefined, {
+          {when.toLocaleString("en-GB", {
+            timeZone: "Europe/London",
             month: "short",
             day: "numeric",
             hour: "2-digit",
@@ -210,7 +223,7 @@ function UsageCard({ row }: { row: UsageRow }) {
           <span>{(row.duration_ms / 1000).toFixed(1)}s</span>
         )}
         <span title={row.user_id ?? ""}>
-          user: {row.user_id ? row.user_id.slice(0, 8) : "—"}
+          {email ?? (row.user_id ? row.user_id.slice(0, 8) : "—")}
         </span>
       </div>
       {row.error_message && (

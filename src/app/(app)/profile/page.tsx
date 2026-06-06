@@ -89,6 +89,12 @@ export default async function ProfilePage() {
           >
             Install Adorned on your iPhone
           </Link>
+          <Link
+            href="/debug/prettify"
+            className="block text-[12px] text-mid underline underline-offset-2"
+          >
+            Prettify playground (debug)
+          </Link>
           <form
             action={async () => {
               "use server";

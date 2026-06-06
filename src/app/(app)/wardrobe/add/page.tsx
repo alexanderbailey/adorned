@@ -4,18 +4,17 @@ import { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { removeBackground, generateThumb } from "@/lib/bg-removal";
-import type { BgRemovalProgress } from "@/lib/bg-removal";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
+import { prettifyViaApi } from "@/lib/prettify-client";
 import { extractErrorMessage } from "@/lib/error";
 import { Icon } from "@/components/Icon";
 
 type Stage =
   | { type: "idle" }
-  | { type: "removing"; progress: number; label: string }
   | { type: "uploading" }
+  | { type: "prettifying" }
   | { type: "tagging" }
   | { type: "error"; message: string };
 
@@ -34,39 +33,10 @@ export default function AddItemPage() {
       setPreview(origUrl);
 
       try {
-        // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
-        const { file: normalized, hasAlpha } = await normalizeImage(file);
+        // 0. Normalise + downsize the source photo (HEIC/AVIF -> JPEG/PNG, max 1920px).
+        const { file: normalized } = await normalizeImage(file);
 
-        // 1. Remove background — skip if the input already has any transparency
-        //    (running bg-removal on a cutout fills the holes with black).
-        let cutoutBlob: Blob;
-        if (hasAlpha) {
-          setStage({ type: "removing", progress: 100, label: "Already a cutout — skipping bg removal" });
-          cutoutBlob = normalized;
-        } else {
-          setStage({ type: "removing", progress: 0, label: "Loading model…" });
-          cutoutBlob = await removeBackground(
-            normalized,
-            (p: BgRemovalProgress) => {
-              const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
-              const label =
-                p.type === "loading"
-                  ? `Downloading model… ${pct}%`
-                  : `Removing background… ${pct}%`;
-              setStage({ type: "removing", progress: pct, label });
-            }
-          );
-        }
-
-        // Update preview to cutout
-        URL.revokeObjectURL(origUrl);
-        const cutoutPreviewUrl = URL.createObjectURL(cutoutBlob);
-        setPreview(cutoutPreviewUrl);
-
-        // 2. Generate thumb
-        const thumbBlob = await generateThumb(cutoutBlob);
-
-        // 3. Upload to Supabase Storage via server route
+        // 1. Upload the normalised original to storage.
         setStage({ type: "uploading" });
         const supabase = createClient();
         const {
@@ -75,22 +45,23 @@ export default function AddItemPage() {
         if (!user) throw new Error("Not authenticated");
 
         const itemId = crypto.randomUUID();
-        const cutoutExt = cutoutBlob.type === "image/png" ? "png" : "webp";
-        const cutoutType = cutoutBlob.type || "image/webp";
         const origExt = normalized.type === "image/png" ? "png" : "jpg";
-        const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-          uploadViaApi("items", `${itemId}/original.${origExt}`, normalized, {
-            contentType: normalized.type,
-          }),
-          uploadViaApi("items", `${itemId}/cutout.${cutoutExt}`, cutoutBlob, {
-            contentType: cutoutType,
-          }),
-          uploadViaApi("items", `${itemId}/thumb.webp`, thumbBlob, {
-            contentType: "image/webp",
-          }).catch(() => null),
-        ]);
+        const originalUrl = await uploadViaApi(
+          "items",
+          `${itemId}/original.${origExt}`,
+          normalized,
+          { contentType: normalized.type }
+        );
 
-        // 4. Call Claude Haiku to tag
+        // 2. Call Gemini prettify — bg removal + straighten + smooth creases.
+        setStage({ type: "prettifying" });
+        const cutoutUrl = await prettifyViaApi(itemId, originalUrl);
+
+        // Update preview to the prettified cutout.
+        URL.revokeObjectURL(origUrl);
+        setPreview(cutoutUrl);
+
+        // 3. Call Claude Haiku to tag using the prettified cutout.
         setStage({ type: "tagging" });
         const tagRes = await fetch("/api/items/tag", {
           method: "POST",
@@ -104,12 +75,12 @@ export default function AddItemPage() {
         }
         const tags: ItemTags = await tagRes.json();
 
-        // 5. Navigate to review page with all data in sessionStorage
+        // 4. Navigate to review page with all data in sessionStorage.
         const payload = {
           itemId,
           originalImageUrl: originalUrl,
           cutoutImageUrl: cutoutUrl,
-          thumbImageUrl: thumbUrl,
+          thumbImageUrl: null,
           tags,
         };
         sessionStorage.setItem("adorned:add-review", JSON.stringify(payload));
@@ -153,20 +124,15 @@ export default function AddItemPage() {
         )}
 
         {/* Progress states */}
-        {stage.type === "removing" && (
-          <div className="w-full max-w-[280px] space-y-3">
-            <div className="h-[3px] bg-hairline rounded-full overflow-hidden">
-              <div
-                className="h-full bg-accent rounded-full transition-all duration-300"
-                style={{ width: `${stage.progress}%` }}
-              />
-            </div>
-            <p className="text-[13px] text-mid text-center">{stage.label}</p>
-          </div>
-        )}
-
         {stage.type === "uploading" && (
           <p className="text-[13px] text-mid text-center">Uploading…</p>
+        )}
+
+        {stage.type === "prettifying" && (
+          <div className="flex flex-col items-center gap-2 text-[13px] text-mid">
+            <Icon name="auto_awesome" size={14} className="text-accent animate-spin" />
+            <p>Prettifying — usually 10–20 seconds.</p>
+          </div>
         )}
 
         {stage.type === "tagging" && (

@@ -1,40 +1,60 @@
 "use client";
 
-// Claude vision accepts jpeg, png, gif, webp. iPhone Photos can hand us
-// HEIC or AVIF — bg-removal silently passes those through, then Claude
-// rejects on content-sniff.
-//
-// We also detect alpha channels so we can:
-//   1) preserve transparency (PNG instead of JPEG — otherwise transparent
-//      pixels collapse to black and bg-removal eats the edges), and
-//   2) tell callers when the input is already a cutout, so they can skip
-//      bg-removal entirely.
+// iPhone Photos can hand us HEIC or AVIF, and phone snaps are 12+ MP which
+// blow past Vercel's function body limit. This module:
+//   1) decodes the input to canvas (browser handles HEIC/AVIF where supported),
+//   2) downsizes to a max long-edge of MAX_DIMENSION,
+//   3) re-encodes as JPEG (or PNG if the source has alpha — we don't want to
+//      flatten a transparent cutout to a black background).
 
-const CLAUDE_SAFE = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 const ALPHA_CAPABLE = new Set(["image/png", "image/webp", "image/avif", "image/gif"]);
+const MAX_DIMENSION = 1920;
 
 export interface NormalizedImage {
   file: File;
   hasAlpha: boolean;
-  /** All four corners transparent — input looks like an already-extracted cutout. */
-  looksLikeCutout: boolean;
 }
 
 export async function normalizeImage(file: File): Promise<NormalizedImage> {
-  // Fast path: a JPEG can't have alpha, so it's never a cutout. Skip decode.
-  if (file.type === "image/jpeg") {
-    return { file, hasAlpha: false, looksLikeCutout: false };
-  }
-
-  // For other formats we need to decode anyway (to check alpha and/or to
-  // convert away from HEIC/AVIF).
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const w = img.naturalWidth;
-      const h = img.naturalHeight;
+
+      const srcW = img.naturalWidth;
+      const srcH = img.naturalHeight;
+      const scale = Math.min(1, MAX_DIMENSION / Math.max(srcW, srcH));
+      const w = Math.round(srcW * scale);
+      const h = Math.round(srcH * scale);
+
+      // First draw at full size to a probe canvas so we can sample alpha cheaply.
+      // For huge JPEGs we skip the probe (no alpha possible) and go straight to
+      // the resized canvas.
+      let hasAlpha = false;
+      if (ALPHA_CAPABLE.has(file.type)) {
+        const probe = document.createElement("canvas");
+        probe.width = srcW;
+        probe.height = srcH;
+        const pctx = probe.getContext("2d");
+        if (pctx) {
+          pctx.drawImage(img, 0, 0);
+          // Sample a coarse grid — fast enough at original size, catches both
+          // corner-transparent cutouts and partial-alpha (feathered) edges.
+          const step = 12;
+          const stepX = Math.max(1, Math.floor(srcW / step));
+          const stepY = Math.max(1, Math.floor(srcH / step));
+          outer: for (let y = 0; y < srcH; y += stepY) {
+            for (let x = 0; x < srcW; x += stepX) {
+              if (pctx.getImageData(x, y, 1, 1).data[3] < 255) {
+                hasAlpha = true;
+                break outer;
+              }
+            }
+          }
+        }
+      }
+
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
@@ -43,41 +63,8 @@ export async function normalizeImage(file: File): Promise<NormalizedImage> {
         reject(new Error("Could not get canvas context"));
         return;
       }
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, w, h);
 
-      // Check alpha by sampling: corners + a coarse interior scan.
-      // Only formats that can carry alpha get checked; JPEGs early-returned.
-      let hasAlpha = false;
-      let corners = 0;
-      if (ALPHA_CAPABLE.has(file.type)) {
-        const corner = (x: number, y: number) =>
-          ctx.getImageData(x, y, 1, 1).data[3] === 0;
-        const c0 = corner(0, 0);
-        const c1 = corner(w - 1, 0);
-        const c2 = corner(0, h - 1);
-        const c3 = corner(w - 1, h - 1);
-        corners = (c0 ? 1 : 0) + (c1 ? 1 : 0) + (c2 ? 1 : 0) + (c3 ? 1 : 0);
-        if (corners > 0) {
-          hasAlpha = true;
-        } else {
-          // No corner transparency — sample a coarse 10×10 grid to catch
-          // partial-alpha images (e.g. shadows or feathered edges).
-          const step = 10;
-          const stepX = Math.max(1, Math.floor(w / step));
-          const stepY = Math.max(1, Math.floor(h / step));
-          outer: for (let y = 0; y < h; y += stepY) {
-            for (let x = 0; x < w; x += stepX) {
-              if (ctx.getImageData(x, y, 1, 1).data[3] < 255) {
-                hasAlpha = true;
-                break outer;
-              }
-            }
-          }
-        }
-      }
-      const looksLikeCutout = corners >= 3;
-
-      // Output format: keep alpha if present, otherwise JPEG (smaller).
       const outFormat = hasAlpha ? "image/png" : "image/jpeg";
       const outExt = hasAlpha ? "png" : "jpg";
 
@@ -89,10 +76,10 @@ export async function normalizeImage(file: File): Promise<NormalizedImage> {
           }
           const newName = file.name.replace(/\.[^.]+$/, `.${outExt}`);
           const out = new File([blob], newName, { type: outFormat });
-          resolve({ file: out, hasAlpha, looksLikeCutout });
+          resolve({ file: out, hasAlpha });
         },
         outFormat,
-        outFormat === "image/jpeg" ? 0.92 : undefined
+        outFormat === "image/jpeg" ? 0.9 : undefined
       );
     };
     img.onerror = () => {
@@ -105,16 +92,4 @@ export async function normalizeImage(file: File): Promise<NormalizedImage> {
     };
     img.src = url;
   });
-
-  // Note: previously this returned a File directly. If a caller still imports
-  // it that way it'll break — both call sites updated in the same change.
-}
-
-// Back-compat helper for callers that just want the file (don't care about
-// the alpha/cutout signal). Unused so far but here in case it's useful.
-export async function normalizeImageFile(file: File): Promise<File> {
-  // Already Claude-safe AND no special handling needed → fast path.
-  if (CLAUDE_SAFE.has(file.type) && file.type === "image/jpeg") return file;
-  const { file: out } = await normalizeImage(file);
-  return out;
 }

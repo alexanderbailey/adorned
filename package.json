@@ -12,7 +12,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
     "@google/genai": "^2.7.0",
-    "@imgly/background-removal": "^1.4.5",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.50.0",
     "clsx": "^2.1.1",

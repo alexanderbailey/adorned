@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { removeBackground, generateThumb } from "@/lib/bg-removal";
 import { uploadViaApi } from "@/lib/upload";
 import { normalizeImage } from "@/lib/normalize-image";
+import { prettifyViaApi } from "@/lib/prettify-client";
 import { Icon } from "@/components/Icon";
 import { extractErrorMessage } from "@/lib/error";
 import { clsx } from "clsx";
@@ -29,8 +29,8 @@ const CONCURRENCY = 3;
 
 type ItemStatus =
   | { kind: "queued" }
-  | { kind: "removing"; progress: number }
   | { kind: "uploading" }
+  | { kind: "prettifying" }
   | { kind: "tagging" }
   | { kind: "ready" }
   | { kind: "failed"; error: string };
@@ -214,42 +214,24 @@ async function processItem(
   update: (id: string, patch: Partial<QueueItem>) => void
 ) {
   try {
-    // 0. Normalise to a Claude-safe format (HEIC/AVIF -> JPEG/PNG).
-    const { file: normalized, hasAlpha } = await normalizeImage(item.file);
+    // 0. Normalise + downsize (HEIC/AVIF -> JPEG/PNG, max 1920px).
+    const { file: normalized } = await normalizeImage(item.file);
 
-    // 1. Background removal — skip if the input already has transparency
-    //    anywhere (running bg-removal on a cutout fills the holes with black).
-    let cutoutBlob: Blob;
-    if (hasAlpha) {
-      update(item.id, { status: { kind: "uploading" } });
-      cutoutBlob = normalized;
-    } else {
-      update(item.id, { status: { kind: "removing", progress: 0 } });
-      cutoutBlob = await removeBackground(normalized, (p) => {
-        const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
-        update(item.id, { status: { kind: "removing", progress: pct } });
-      });
-    }
-    const thumbBlob = await generateThumb(cutoutBlob);
-
-    // 2. Upload to Supabase Storage via server route
+    // 1. Upload the normalised original to storage.
     update(item.id, { status: { kind: "uploading" } });
-    const cutoutExt = cutoutBlob.type === "image/png" ? "png" : "webp";
-    const cutoutType = cutoutBlob.type || "image/webp";
     const origExt = normalized.type === "image/png" ? "png" : "jpg";
-    const [originalUrl, cutoutUrl, thumbUrl] = await Promise.all([
-      uploadViaApi("items", `${item.itemId}/original.${origExt}`, normalized, {
-        contentType: normalized.type,
-      }),
-      uploadViaApi("items", `${item.itemId}/cutout.${cutoutExt}`, cutoutBlob, {
-        contentType: cutoutType,
-      }),
-      uploadViaApi("items", `${item.itemId}/thumb.webp`, thumbBlob, {
-        contentType: "image/webp",
-      }).catch(() => null),
-    ]);
+    const originalUrl = await uploadViaApi(
+      "items",
+      `${item.itemId}/original.${origExt}`,
+      normalized,
+      { contentType: normalized.type }
+    );
 
-    // 3. Claude Haiku tagging
+    // 2. Gemini prettify: bg removal + straighten + smooth creases.
+    update(item.id, { status: { kind: "prettifying" } });
+    const cutoutUrl = await prettifyViaApi(item.itemId, originalUrl);
+
+    // 3. Claude Haiku tagging on the prettified image.
     update(item.id, { status: { kind: "tagging" } });
     const tagRes = await fetch("/api/items/tag", {
       method: "POST",
@@ -269,7 +251,7 @@ async function processItem(
         itemId: item.itemId,
         originalImageUrl: originalUrl,
         cutoutImageUrl: cutoutUrl,
-        thumbImageUrl: thumbUrl,
+        thumbImageUrl: null,
         tags,
       },
     });
@@ -333,22 +315,10 @@ function StatusLine({ status }: { status: ItemStatus }) {
   switch (status.kind) {
     case "queued":
       return <p className="text-[12px] text-mid">Queued</p>;
-    case "removing":
-      return (
-        <div className="flex items-center gap-2 mt-1">
-          <div className="flex-1 h-[3px] bg-hairline rounded-full overflow-hidden">
-            <div
-              className="h-full bg-accent transition-all duration-200"
-              style={{ width: `${status.progress}%` }}
-            />
-          </div>
-          <span className="text-[11px] text-mid font-mono tabular-nums shrink-0">
-            {status.progress}%
-          </span>
-        </div>
-      );
     case "uploading":
       return <p className="text-[12px] text-mid">Uploading…</p>;
+    case "prettifying":
+      return <p className="text-[12px] text-mid">Prettifying…</p>;
     case "tagging":
       return <p className="text-[12px] text-mid">Identifying…</p>;
     case "ready":

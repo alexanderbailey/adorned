@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { Icon } from "@/components/Icon";
 import { normalizeImage } from "@/lib/normalize-image";
 
@@ -337,39 +338,89 @@ export default function DebugPrettifyPage() {
         </button>
       </div>
 
-      {/* Zoom modal */}
+      {/* Zoom modal — JS-based pinch/pan since the app viewport disables native zoom */}
       {zoomOpen && result && (
-        <div
-          className="fixed inset-0 z-50 bg-charcoal/95 flex items-center justify-center"
-          onClick={() => setZoomOpen(false)}
-        >
-          <div
-            className="w-full h-full overflow-auto"
-            style={{
-              touchAction: "pinch-zoom",
-              WebkitOverflowScrolling: "touch",
-              backgroundImage:
-                "linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%)",
-              backgroundSize: "24px 24px",
-              backgroundPosition: "0 0, 0 12px, 12px -12px, -12px 0px",
-            }}
-            onClick={(e) => e.stopPropagation()}
+        <div className="fixed inset-0 z-50 bg-charcoal">
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.5}
+            maxScale={10}
+            doubleClick={{ mode: "zoomIn", step: 1 }}
+            wheel={{ step: 0.2 }}
+            pinch={{ step: 5 }}
+            limitToBounds={false}
+            centerOnInit
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={result.image}
-              alt="Result zoomed"
-              className="block min-w-full min-h-full"
-              style={{ touchAction: "pinch-zoom" }}
-            />
-          </div>
-          <button
-            onClick={() => setZoomOpen(false)}
-            className="fixed top-[54px] right-4 w-10 h-10 flex items-center justify-center bg-canvas rounded-full"
-            aria-label="Close zoom"
-          >
-            <Icon name="close" size={22} />
-          </button>
+            {({ resetTransform, zoomIn, zoomOut }) => (
+              <>
+                <TransformComponent
+                  wrapperStyle={{
+                    width: "100%",
+                    height: "100%",
+                    backgroundImage:
+                      "linear-gradient(45deg, #444 25%, transparent 25%), linear-gradient(-45deg, #444 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #444 75%), linear-gradient(-45deg, transparent 75%, #444 75%)",
+                    backgroundSize: "24px 24px",
+                    backgroundPosition: "0 0, 0 12px, 12px -12px, -12px 0px",
+                  }}
+                  contentStyle={{ width: "100%", height: "100%" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={result.image}
+                    alt="Result zoomed"
+                    style={{
+                      maxWidth: "100vw",
+                      maxHeight: "100vh",
+                      objectFit: "contain",
+                      display: "block",
+                    }}
+                  />
+                </TransformComponent>
+
+                {/* Controls overlay */}
+                <div
+                  className="fixed left-1/2 -translate-x-1/2 flex items-center gap-1 bg-canvas/95 backdrop-blur rounded-full px-1 py-1 shadow-lg"
+                  style={{ bottom: "calc(20px + env(safe-area-inset-bottom, 0px))" }}
+                >
+                  <button
+                    onClick={() => zoomOut()}
+                    className="w-10 h-10 flex items-center justify-center text-charcoal"
+                    aria-label="Zoom out"
+                  >
+                    <Icon name="remove" size={22} />
+                  </button>
+                  <button
+                    onClick={() => resetTransform()}
+                    className="px-3 h-10 flex items-center justify-center text-charcoal text-[12px] font-medium"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={() => zoomIn()}
+                    className="w-10 h-10 flex items-center justify-center text-charcoal"
+                    aria-label="Zoom in"
+                  >
+                    <Icon name="add" size={22} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setZoomOpen(false)}
+                  className="fixed top-[54px] right-4 w-10 h-10 flex items-center justify-center bg-canvas rounded-full shadow"
+                  aria-label="Close zoom"
+                >
+                  <Icon name="close" size={22} />
+                </button>
+
+                <p
+                  className="fixed left-1/2 -translate-x-1/2 text-[11px] text-canvas/70 text-center pointer-events-none whitespace-nowrap"
+                  style={{ top: "calc(54px + 12px)" }}
+                >
+                  Pinch · drag · double-tap to zoom
+                </p>
+              </>
+            )}
+          </TransformWrapper>
         </div>
       )}
     </div>

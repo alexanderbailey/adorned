@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { tagItem } from "@/lib/claude/tag-item";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { logAiUsage } from "@/lib/usage";
+import { assertActiveSubscription } from "@/lib/billing/gate";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,6 +17,12 @@ export async function POST(request: Request) {
   if (!isEmailAllowed(user.email)) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
+
+  // The per-item wardrobe credit was already taken during the prettify step.
+  // Tag failures don't refund — the client can retry tag on the existing
+  // cutout for free. We just require an active subscription to use the AI.
+  const sub = await assertActiveSubscription(user.id);
+  if (!sub.ok) return sub.response;
 
   const body = await request.json();
   const { cutout_image_url } = body as { cutout_image_url: string };

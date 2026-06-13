@@ -12,6 +12,8 @@ import { extractErrorMessage } from "@/lib/error";
 import { clsx } from "clsx";
 import type { ItemTags } from "@/lib/claude/tag-item";
 import type { ItemCategory, ItemFormality, ItemSeason } from "@/lib/types";
+import { useEntitlements } from "@/lib/billing/useEntitlements";
+import { OutOfCreditModal } from "@/components/billing/OutOfCreditModal";
 
 const CATEGORIES: ItemCategory[] = [
   "tops", "bottoms", "skirts", "dresses", "outerwear",
@@ -60,6 +62,8 @@ export default function BulkAddPage() {
   const itemsRef = useRef<QueueItem[]>([]);
   const [items, setItems] = useState<QueueItem[]>([]);
   const [mode, setMode] = useState<Mode>("picking");
+  const { data: entitlements, refresh: refreshEntitlements } = useEntitlements();
+  const [showTopupModal, setShowTopupModal] = useState(false);
 
   // Sync ref so async workers can mutate without stale closures.
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function BulkAddPage() {
     []
   );
 
-  const handlePick = useCallback(
+  const startProcessing = useCallback(
     async (files: FileList) => {
       const images = Array.from(files).filter((f) => f.type.startsWith("image/"));
       if (images.length === 0) return;
@@ -107,8 +111,26 @@ export default function BulkAddPage() {
         }
       });
       await Promise.all(workers);
+      void refreshEntitlements();
     },
-    [updateItem]
+    [updateItem, refreshEntitlements]
+  );
+
+  // Pre-check: refuse to start if the batch exceeds available wardrobe credits.
+  // (The server would refuse mid-batch anyway, but we'd rather not waste any.)
+  const handlePick = useCallback(
+    (files: FileList) => {
+      const imageCount = Array.from(files).filter((f) =>
+        f.type.startsWith("image/")
+      ).length;
+      const available = entitlements?.wardrobeCreditsTotal ?? Infinity;
+      if (imageCount > available) {
+        setShowTopupModal(true);
+        return;
+      }
+      void startProcessing(files);
+    },
+    [entitlements, startProcessing]
   );
 
   const readyCount = items.filter((i) => i.status.kind === "ready").length;
@@ -201,6 +223,19 @@ export default function BulkAddPage() {
         <div className="flex-1 flex items-center justify-center">
           <p className="text-[14px] text-mid">Saved.</p>
         </div>
+      )}
+
+      {mode === "picking" && entitlements && (
+        <p className="px-6 pb-4 text-[11px] text-mid text-center">
+          {entitlements.wardrobeCreditsTotal} wardrobe additions available
+        </p>
+      )}
+
+      {showTopupModal && (
+        <OutOfCreditModal
+          resource="wardrobe_add"
+          onClose={() => setShowTopupModal(false)}
+        />
       )}
     </div>
   );

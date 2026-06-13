@@ -8,6 +8,11 @@ import {
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { logAiUsage } from "@/lib/usage";
 import type { PaletteSwatch, PromptChips } from "@/lib/types";
+import {
+  consumeOutfitWithCap,
+  refundOutfit,
+  gateErrorResponse,
+} from "@/lib/billing/gate";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -77,6 +82,11 @@ export async function POST(request: Request) {
     );
   }
 
+  // Tick the hidden daily outfit counter. 429 means the user hit the cap;
+  // the client renders a cooldown screen, not a top-up modal.
+  const cap = await consumeOutfitWithCap(user.id);
+  if (!cap.ok) return gateErrorResponse(cap);
+
   const started = Date.now();
   try {
     const result = await generateOutfits({
@@ -103,6 +113,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ outfits: result.outfits });
   } catch (err) {
     console.error("[generate-outfits] failed:", err);
+    await refundOutfit(user.id);
     const message = err instanceof Error ? err.message : "Generation failed";
     await logAiUsage({
       userId: user.id,
@@ -112,6 +123,7 @@ export async function POST(request: Request) {
       durationMs: Date.now() - started,
       status: "error",
       errorMessage: message,
+      metadata: { credit_refunded: true },
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

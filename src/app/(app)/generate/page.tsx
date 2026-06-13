@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import type { ItemCategory, PromptChips } from "@/lib/types";
 import { clsx } from "clsx";
 import { extractErrorMessage } from "@/lib/error";
+import { useEntitlements } from "@/lib/billing/useEntitlements";
+import { DailyCapCooldown } from "@/components/billing/DailyCapCooldown";
 
-type Phase = "input" | "loading" | "results";
+type Phase = "input" | "loading" | "results" | "cap_reached";
 
 interface ItemLite {
   id: string;
@@ -38,12 +40,11 @@ const CHIP_OPTIONS: { key: keyof PromptChips; label: string; values: string[] }[
     values: ["warm", "mild", "cool", "cold", "rain"] },
   { key: "formality", label: "Formality",
     values: ["casual", "smart-casual", "formal"] },
-  { key: "mood",      label: "Mood",
-    values: ["minimal", "polished", "playful", "bold", "cozy"] },
 ];
 
 export default function GeneratePage() {
   const router = useRouter();
+  const { data: entitlements, refresh: refreshEntitlements } = useEntitlements();
   const [phase, setPhase] = useState<Phase>("input");
   const [prompt, setPrompt] = useState("");
   const [chips, setChips] = useState<PromptChips>({});
@@ -96,6 +97,11 @@ export default function GeneratePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),
       });
+      if (res.status === 429) {
+        setPhase("cap_reached");
+        void refreshEntitlements();
+        return;
+      }
       if (!res.ok) {
         const body = await res.text();
         const msg = extractErrorMessage(body) || `HTTP ${res.status}`;
@@ -104,6 +110,7 @@ export default function GeneratePage() {
       const { outfits: result } = (await res.json()) as { outfits: GeneratedOutfit[] };
       setOutfits(result);
       setPhase("results");
+      void refreshEntitlements();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setPhase("input");
@@ -166,6 +173,15 @@ export default function GeneratePage() {
         <div className="w-8 h-8 rounded-full border-2 border-hairline border-t-accent animate-spin" />
         <p className="text-[14px] text-mid">Styling 3 looks…</p>
       </div>
+    );
+  }
+
+  if (phase === "cap_reached") {
+    return (
+      <DailyCapCooldown
+        currentTier={entitlements?.tier ?? null}
+        onDismiss={() => setPhase("input")}
+      />
     );
   }
 

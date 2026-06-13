@@ -5,6 +5,11 @@ import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { visualizeOutfit, QUALITY_TIERS, type QualityTier } from "@/lib/gemini/visualize-outfit";
 import { logAiUsage } from "@/lib/usage";
 import type { ItemCategory } from "@/lib/types";
+import {
+  consumeTryon,
+  refundTryon,
+  gateErrorResponse,
+} from "@/lib/billing/gate";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
 export const maxDuration = 60;
@@ -108,6 +113,11 @@ export async function POST(
     );
   }
 
+  // Consume a try-on credit (subscription pool first, then oldest top-up).
+  // Refunded below on transient Gemini failures.
+  const gate = await consumeTryon(user.id);
+  if (!gate.ok) return gateErrorResponse(gate);
+
   const context_ = [
     outfit.prompt ? `Occasion: ${outfit.prompt}` : null,
     outfit.ai_reasoning ? `Stylist notes: ${outfit.ai_reasoning}` : null,
@@ -164,6 +174,7 @@ export async function POST(
     return NextResponse.json({ lookbook_url: url });
   } catch (err) {
     console.error("[visualize] failed:", err);
+    await refundTryon(user.id, gate.source, gate.topupId);
     const message = err instanceof Error ? err.message : "Visualization failed";
     await logAiUsage({
       userId: user.id,
@@ -173,7 +184,12 @@ export async function POST(
       durationMs: Date.now() - started,
       status: "error",
       errorMessage: message,
-      metadata: { outfit_id: outfitId, quality, item_count: visualizeItems.length },
+      metadata: {
+        outfit_id: outfitId,
+        quality,
+        item_count: visualizeItems.length,
+        credit_refunded: true,
+      },
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

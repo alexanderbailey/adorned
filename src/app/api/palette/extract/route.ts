@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { extractPalette } from "@/lib/claude/extract-palette";
 import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { logAiUsage } from "@/lib/usage";
+import { assertActiveSubscription } from "@/lib/billing/gate";
 
 const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
@@ -17,6 +18,10 @@ export async function POST(request: Request) {
   if (!isEmailAllowed(user.email)) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
+
+  // Onboarding AI calls are free with any active subscription (no decrement).
+  const sub = await assertActiveSubscription(user.id);
+  if (!sub.ok) return sub.response;
 
   const form = await request.formData();
   const file = form.get("file");

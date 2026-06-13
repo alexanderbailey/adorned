@@ -51,8 +51,39 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Billing gate: authed users without an active subscription land on /pricing.
+  // Whitelist /pricing, /billing, and the billing/cron API routes so the dummy
+  // payment flow can operate. Onboarding pages also require a subscription.
+  const isBillingPath =
+    pathname === "/pricing" ||
+    pathname === "/billing" ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/api/billing/") ||
+    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/debug/billing/");
+
+  if (user && !isPublicPath && !isApiPath && !isBillingPath) {
+    const { data: sub } = await supabase
+      .from("user_subscriptions")
+      .select("status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (sub?.status !== "active") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/pricing";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Authenticated users without a completed onboarding are pushed into it.
-  if (user && !isPublicPath && !isApiPath && !pathname.startsWith("/onboarding")) {
+  if (
+    user &&
+    !isPublicPath &&
+    !isApiPath &&
+    !isBillingPath &&
+    !pathname.startsWith("/onboarding")
+  ) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("onboarded_at")

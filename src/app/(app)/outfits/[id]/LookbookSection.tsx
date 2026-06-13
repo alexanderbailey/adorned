@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { Icon } from "@/components/Icon";
 import { extractErrorMessage } from "@/lib/error";
+import { useEntitlements } from "@/lib/billing/useEntitlements";
+import { OutOfCreditModal } from "@/components/billing/OutOfCreditModal";
 
 interface Props {
   outfitId: string;
@@ -28,10 +30,12 @@ export function LookbookSection({
   hasBodyPhoto,
 }: Props) {
   const toast = useToast();
+  const { data: entitlements, refresh: refreshEntitlements } = useEntitlements();
   const [lookbookUrl, setLookbookUrl] = useState<string | null>(initialLookbookUrl);
   const [phase, setPhase] = useState<Phase>(initialLookbookUrl ? "done" : "idle");
   const [error, setError] = useState<string | null>(null);
   const [activeQuality, setActiveQuality] = useState<Quality | null>(null);
+  const [outOfCredit, setOutOfCredit] = useState(false);
 
   async function generate(quality: Quality) {
     if (!hasBodyPhoto) return;
@@ -44,6 +48,11 @@ export function LookbookSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quality }),
       });
+      if (res.status === 402) {
+        setPhase(initialLookbookUrl ? "done" : "idle");
+        setOutOfCredit(true);
+        return;
+      }
       if (!res.ok) {
         const body = await res.text();
         const detail = extractErrorMessage(body) || `HTTP ${res.status}`;
@@ -53,6 +62,7 @@ export function LookbookSection({
       setLookbookUrl(lookbook_url);
       setPhase("done");
       toast.show("Lookbook ready", "success");
+      void refreshEntitlements();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed";
       setError(msg);
@@ -60,6 +70,11 @@ export function LookbookSection({
       toast.show(msg, "error");
     }
   }
+
+  // Pre-disable when client cache shows zero credits. Server still re-checks
+  // (the source of truth) — this just prevents the wasted round-trip.
+  const noCredits =
+    entitlements !== null && entitlements.tryonCreditsTotal === 0;
 
   if (!hasBodyPhoto) {
     return (
@@ -122,8 +137,9 @@ export function LookbookSection({
           {QUALITY_OPTIONS.map((opt) => (
             <button
               key={opt.value}
+              disabled={noCredits}
               onClick={() => generate(opt.value)}
-              className="h-14 px-3 border border-border-strong text-charcoal rounded-[6px] flex flex-col items-center justify-center gap-0.5 transition-colors active:bg-surface-alt"
+              className="h-14 px-3 border border-border-strong text-charcoal rounded-[6px] flex flex-col items-center justify-center gap-0.5 transition-colors active:bg-surface-alt disabled:opacity-40"
             >
               <span className="flex items-center gap-1.5 text-[13px] font-medium">
                 <Icon name="auto_awesome" size={14} />
@@ -135,6 +151,22 @@ export function LookbookSection({
             </button>
           ))}
         </div>
+      )}
+
+      {showButtons && noCredits && (
+        <button
+          onClick={() => setOutOfCredit(true)}
+          className="text-[12px] text-mid underline underline-offset-2 mx-auto block"
+        >
+          Out of dress-on-me looks — get more
+        </button>
+      )}
+
+      {outOfCredit && (
+        <OutOfCreditModal
+          resource="tryon"
+          onClose={() => setOutOfCredit(false)}
+        />
       )}
     </section>
   );

@@ -26,7 +26,6 @@ export interface PromptChips {
   occasion?: string;
   weather?: string;
   formality?: string;
-  mood?: string;
 }
 
 // -------------------------------------------------------
@@ -192,11 +191,172 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["wear_log"]["Insert"]>;
         Relationships: [];
       };
+      user_subscriptions: {
+        Row: {
+          user_id: string;
+          tier: "standard" | "pro";
+          status: "active" | "cancelled" | "past_due";
+          current_period_start: string;
+          current_period_end: string;
+          cancel_at_period_end: boolean;
+          pending_tier_change: "standard" | "pro" | null;
+          sub_tryon_credits: number;
+          sub_wardrobe_credits: number;
+          daily_outfit_count: number;
+          daily_count_reset_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: InsertOf<
+          Database["public"]["Tables"]["user_subscriptions"]["Row"],
+          "created_at" | "updated_at",
+          | "status"
+          | "current_period_start"
+          | "cancel_at_period_end"
+          | "sub_tryon_credits"
+          | "sub_wardrobe_credits"
+          | "daily_outfit_count"
+          | "daily_count_reset_date"
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["user_subscriptions"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      topup_purchases: {
+        Row: {
+          id: string;
+          user_id: string;
+          resource: "tryon" | "wardrobe_add";
+          amount_granted: number;
+          amount_remaining: number;
+          price_cents: number;
+          currency: string;
+          purchased_at: string;
+        };
+        Insert: InsertOf<
+          Database["public"]["Tables"]["topup_purchases"]["Row"],
+          "id" | "purchased_at",
+          "currency"
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["topup_purchases"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      billing_checkout_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          mode: "subscription" | "payment";
+          tier: "standard" | "pro" | null;
+          pack: string | null;
+          amount_cents: number;
+          currency: string;
+          status: "pending" | "completed" | "expired";
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: InsertOf<
+          Database["public"]["Tables"]["billing_checkout_sessions"]["Row"],
+          "id" | "created_at",
+          "amount_cents" | "currency" | "status"
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["billing_checkout_sessions"]["Insert"]
+        >;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      subscribe_tier: {
+        Args: {
+          p_user_id: string;
+          p_tier: "standard" | "pro";
+          p_initial_tryon: number;
+          p_initial_wardrobe: number;
+          p_period_days?: number;
+        };
+        Returns: Database["public"]["Tables"]["user_subscriptions"]["Row"];
+      };
+      schedule_tier_change: {
+        Args: {
+          p_user_id: string;
+          p_new_tier: "standard" | "pro";
+          p_pro_monthly_tryon: number;
+          p_pro_initial_wardrobe: number;
+        };
+        Returns: Database["public"]["Tables"]["user_subscriptions"]["Row"];
+      };
+      cancel_subscription: {
+        Args: { p_user_id: string };
+        Returns: Database["public"]["Tables"]["user_subscriptions"]["Row"];
+      };
+      reactivate_subscription: {
+        Args: { p_user_id: string };
+        Returns: Database["public"]["Tables"]["user_subscriptions"]["Row"];
+      };
+      purchase_topup: {
+        Args: {
+          p_user_id: string;
+          p_resource: "tryon" | "wardrobe_add";
+          p_amount: number;
+          p_price_cents: number;
+          p_currency?: string;
+        };
+        Returns: Database["public"]["Tables"]["topup_purchases"]["Row"];
+      };
+      consume_tryon: {
+        Args: { p_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      consume_wardrobe: {
+        Args: { p_user_id: string };
+        Returns: Record<string, unknown>;
+      };
+      consume_outfit_with_cap: {
+        Args: { p_user_id: string; p_cap: number };
+        Returns: Record<string, unknown>;
+      };
+      refund_tryon: {
+        Args: {
+          p_user_id: string;
+          p_source: string;
+          p_topup_id?: string | null;
+        };
+        Returns: void;
+      };
+      refund_wardrobe: {
+        Args: {
+          p_user_id: string;
+          p_source: string;
+          p_topup_id?: string | null;
+        };
+        Returns: void;
+      };
+      refund_outfit: {
+        Args: { p_user_id: string };
+        Returns: void;
+      };
+      advance_billing_cycle: {
+        Args: {
+          p_user_id: string;
+          p_target_tier: "standard" | "pro";
+          p_monthly_tryon: number;
+          p_monthly_wardrobe_drip: number;
+          p_period_days?: number;
+        };
+        Returns: Database["public"]["Tables"]["user_subscriptions"]["Row"];
+      };
+    };
     Enums: {
       item_category: ItemCategory;
+      subscription_tier: "standard" | "pro";
+      subscription_status: "active" | "cancelled" | "past_due";
+      topup_resource: "tryon" | "wardrobe_add";
+      checkout_mode: "subscription" | "payment";
+      checkout_status: "pending" | "completed" | "expired";
     };
   };
 };

@@ -84,6 +84,12 @@ export default async function ProfilePage() {
 
         <div className="pt-6 space-y-3">
           <Link
+            href="/billing"
+            className="block text-[13px] text-charcoal underline underline-offset-2"
+          >
+            Plan &amp; billing
+          </Link>
+          <Link
             href="/install"
             className="block text-[13px] text-charcoal underline underline-offset-2"
           >

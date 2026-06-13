@@ -5,6 +5,11 @@ import { isEmailAllowed } from "@/lib/auth/allowlist";
 import { prettifyItem } from "@/lib/gemini/prettify-item";
 import { keyWhiteBackground } from "@/lib/chroma-key";
 import { logAiUsage } from "@/lib/usage";
+import {
+  consumeWardrobe,
+  refundWardrobe,
+  gateErrorResponse,
+} from "@/lib/billing/gate";
 
 // Gemini image gen can take 15-30s. Bump max function duration.
 export const maxDuration = 60;
@@ -43,12 +48,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // Consume one wardrobe credit before invoking Gemini. Refunded below on
+  // transient failure (Gemini error, upload error). NOT refunded on
+  // input-validation errors above — those return before the consume.
+  const gate = await consumeWardrobe(user.id);
+  if (!gate.ok) return gateErrorResponse(gate);
+
   const started = Date.now();
   let srcByteLength = 0;
   try {
     // Fetch the source image, base64 it for Gemini.
     const srcRes = await fetch(source_image_url);
     if (!srcRes.ok) {
+      await refundWardrobe(user.id, gate.source, gate.topupId);
       return NextResponse.json(
         { error: `Could not fetch source (${srcRes.status})` },
         { status: 400 }
@@ -103,6 +115,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ cutout_url: url });
   } catch (err) {
     console.error("[items/prettify] failed:", err);
+    await refundWardrobe(user.id, gate.source, gate.topupId);
     const message = err instanceof Error ? err.message : "Prettify failed";
     await logAiUsage({
       userId: user.id,
@@ -113,7 +126,7 @@ export async function POST(request: Request) {
       durationMs: Date.now() - started,
       status: "error",
       errorMessage: message,
-      metadata: { item_id },
+      metadata: { item_id, credit_refunded: true },
     });
     return NextResponse.json({ error: message }, { status: 500 });
   }

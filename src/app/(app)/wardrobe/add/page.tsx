@@ -10,6 +10,8 @@ import { normalizeImage } from "@/lib/normalize-image";
 import { prettifyViaApi } from "@/lib/prettify-client";
 import { extractErrorMessage } from "@/lib/error";
 import { Icon } from "@/components/Icon";
+import { useEntitlements } from "@/lib/billing/useEntitlements";
+import { OutOfCreditModal } from "@/components/billing/OutOfCreditModal";
 
 type Stage =
   | { type: "idle" }
@@ -23,10 +25,19 @@ export default function AddItemPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<Stage>({ type: "idle" });
   const [preview, setPreview] = useState<string | null>(null);
+  const { data: entitlements, refresh: refreshEntitlements } = useEntitlements();
+  const [showTopupModal, setShowTopupModal] = useState(false);
 
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("image/")) return;
+
+      // Pre-check: refuse to start the upload if no wardrobe credits.
+      const available = entitlements?.wardrobeCreditsTotal ?? Infinity;
+      if (available < 1) {
+        setShowTopupModal(true);
+        return;
+      }
 
       // Show original preview immediately
       const origUrl = URL.createObjectURL(file);
@@ -91,8 +102,9 @@ export default function AddItemPage() {
           message: err instanceof Error ? err.message : "Something went wrong",
         });
       }
+      void refreshEntitlements();
     },
-    [router]
+    [router, entitlements, refreshEntitlements]
   );
 
   const idle = stage.type === "idle";
@@ -205,6 +217,13 @@ export default function AddItemPage() {
           e.target.value = "";
         }}
       />
+
+      {showTopupModal && (
+        <OutOfCreditModal
+          resource="wardrobe_add"
+          onClose={() => setShowTopupModal(false)}
+        />
+      )}
     </div>
   );
 }
